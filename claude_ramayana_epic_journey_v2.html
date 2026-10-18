@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ramayana: The Epic Journey</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #140d08;
+    color: #f7e7c1;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+  #stage {
+    position: relative;
+    width: min(100%, 1280px);
+    aspect-ratio: 16 / 9;
+    border: 2px solid #b8862b;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    background: #000;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+    user-select: none;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 6, 3, 0.74);
+    padding: 16px;
+    overflow: auto;
+  }
+  #overlay.hidden { display: none; }
+  .panel {
+    background: linear-gradient(#2b1a0e, #1a0f08);
+    border: 2px solid #d4a036;
+    border-radius: 12px;
+    padding: 18px 22px;
+    max-width: 760px;
+    width: 100%;
+    max-height: 100%;
+    overflow: auto;
+  }
+  .panel h1, .panel h2 {
+    margin: 0 0 10px;
+    color: #ffd77a;
+    text-align: center;
+  }
+  .panel h1 { font-size: 26px; }
+  .panel h2 { font-size: 22px; }
+  .panel p { line-height: 1.5; margin: 8px 0; }
+  .btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 14px;
+  }
+  .btn {
+    font: inherit;
+    background: #4a2c14;
+    color: #ffe9b0;
+    border: 1px solid #d4a036;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { background: #6a401b; }
+  .btn:focus-visible { outline: 2px solid #ffd77a; outline-offset: 2px; }
+  .btn.primary { background: #c98a1e; color: #2a1505; font-weight: bold; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .chapters {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .chapter { text-align: left; padding: 8px 10px; }
+  .chapter small { display: block; opacity: 0.8; font-size: 12px; margin-top: 3px; }
+  .help { font-size: 13px; opacity: 0.85; text-align: center; }
+  .fine { font-size: 12px; opacity: 0.7; text-align: center; }
+  #touch { position: absolute; inset: 0; pointer-events: none; display: none; }
+  #touch.on { display: block; }
+  .tbtn {
+    position: absolute; pointer-events: auto; touch-action: none;
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(40, 22, 8, 0.55); border: 2px solid rgba(212, 160, 54, 0.9);
+    color: #ffe9b0; font: bold 22px Georgia, serif;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none;
+  }
+  .tbtn.active { background: rgba(201, 138, 30, 0.8); }
+  #tl { left: 14px; bottom: 16px; } #tr { left: 90px; bottom: 16px; }
+  #tj { right: 14px; bottom: 16px; } #te { right: 90px; bottom: 16px; font-size: 18px; }
+  #tp { right: 14px; top: 84px; width: 44px; height: 44px; font-size: 16px; }
+  #mute {
+    position: absolute; left: 12px; top: 84px; z-index: 2;
+    width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+    background: rgba(20, 10, 4, 0.7); border: 1px solid #d4a036; color: #ffe9b0; font-size: 18px;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="960" height="540" aria-label="Ramayana: The Epic Journey game canvas"></canvas>
+  <div id="touch" aria-label="Touch controls">
+    <button class="tbtn" id="tl" data-key="KeyA" aria-label="Move left">◀</button>
+    <button class="tbtn" id="tr" data-key="KeyD" aria-label="Move right">▶</button>
+    <button class="tbtn" id="tj" data-key="Space" aria-label="Jump">▲</button>
+    <button class="tbtn" id="te" data-key="KeyE" aria-label="Interact">E</button>
+    <button class="tbtn" id="tp" data-key="Escape" aria-label="Pause">II</button>
+  </div>
+  <button id="mute" aria-label="Toggle sound" title="Toggle sound">🔊</button>
+  <div id="overlay" class="hidden"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Constants ----------
+  const W = 960, H = 540, GROUND = 460, EPS = 0.01;
+  const GRAVITY = 1800, MAX_FALL = 900, MOVE_SPEED = 260, JUMP_SPEED = 640;
+  const PLAYER_W = 34, PLAYER_H = 60;
+  const ARROW_SPEED = 1000, ARROW_GRAVITY = 120, ARROW_LIFE = 2.5, SHOOT_COOLDOWN = 0.35;
+  const JUMP_BUFFER = 0.12, INVULN_TIME = 1.5, INTERACT_RANGE = 110;
+  const TAU = Math.PI * 2;
+  const STORAGE_KEY = 'ramayana_epic_journey_save_v1';
+  const LIFE_TYPES = ['platform', 'chase', 'boss'];
+  const FAIL_MESSAGES = {
+    fall: 'Rama fell into the abyss.',
+    hit: 'The hazards overwhelmed Rama.',
+    fireball: 'The fiery blast overwhelmed Rama.'
+  };
+
+  const PALETTES = {
+    palace: { sky1: '#ffe7b3', sky2: '#f2b15c', far: '#d98c3a', ground: '#b5652b', top: '#e0a04a' },
+    forest: { sky1: '#bfe6b8', sky2: '#4e8f5a', far: '#2f6b3f', ground: '#5a3b22', top: '#3f8f3a' },
+    dusk:   { sky1: '#f7c6a3', sky2: '#6b4a7a', far: '#4a3560', ground: '#4b3a4f', top: '#7d5f7f' },
+    sea:    { sky1: '#9fd8f0', sky2: '#2d7fb8', far: '#1f5f8f', ground: '#c9a66b', top: '#e3c48a', water: '#1d6fa6' },
+    lanka:  { sky1: '#ffb27a', sky2: '#7a2e1e', far: '#4a1b14', ground: '#4a3b36', top: '#7a6258' },
+    battle: { sky1: '#d9c7a0', sky2: '#6e5a40', far: '#4b3b2a', ground: '#5c4a3a', top: '#8a7158' }
+  };
+
+  // ---------- The 20 chapters (types: explore, platform, archery, defense, chase, boss) ----------
+  const LEVELS = [
+    { title: 'Birth of Lord Rama', type: 'explore', palette: 'palace', width: 1300, start: 120,
+      ground: [[0, 1300]], platforms: [[520, 360, 140], [900, 350, 160]],
+      items: [
+        { x: 260, label: 'Dasharatha', text: 'King Dasharatha blesses the newborn princes of Ayodhya.' },
+        { x: 600, label: 'Royal Cradle', text: 'A lotus-carved cradle rocks gently as the newborn Rama sleeps.' },
+        { x: 980, label: 'Celebration Lamps', text: 'Lamps are lit across the palace in celebration of the birth.' }
+      ],
+      need: 3,
+      objective: 'Explore the palace and trigger the birth celebration.',
+      ending: 'The palace celebrates the birth of Rama, the eldest of the four princes of Ayodhya.' },
+
+    { title: 'Rama’s Childhood & Education', type: 'archery', palette: 'palace', width: 1700, start: 100,
+      ground: [[0, 1700]], platforms: [[300, 380, 140], [560, 320, 140], [820, 260, 140], [1080, 320, 140], [1340, 380, 140]],
+      targets: Array.from({ length: 10 }, (_, i) => [420 + i * 120, i % 2 ? 250 : 310]),
+      need: 8,
+      objective: 'Hit 8 of 10 training targets.',
+      ending: 'Rama masters the bow in the training grounds and unlocks precision aiming.' },
+
+    { title: 'Rama Meets Sage Vishwamitra', type: 'defense', palette: 'forest', width: 1100, start: 260,
+      ground: [[0, 1100]], platforms: [[400, 380, 120], [700, 352, 140]],
+      ritualX: 130, ritualHp: 5, waves: [4, 6, 8], spawnInterval: 1.2, enemySpeed: [60, 95],
+      objective: 'Protect the ritual for three waves of enemies.',
+      ending: 'The ritual is protected, and Vishwamitra grants Rama the charged arrow.' },
+
+    { title: 'Rama Wins Sita’s Hand', type: 'explore', palette: 'palace', width: 1100, start: 120,
+      ground: [[0, 1100]], platforms: [[460, 350, 200]],
+      items: [
+        { x: 340, label: 'King Janaka', text: 'King Janaka welcomes the princes into his grand court.' },
+        { x: 720, label: 'Bow of Shiva', text: 'Rama lifts the ancient bow. It snaps with a thunderous sound.' }
+      ],
+      need: 2,
+      objective: 'Interact with King Janaka and the legendary bow of Shiva.',
+      ending: 'Rama wins Sita’s hand in marriage, and the celebration begins.' },
+
+    { title: 'Kaikeyi Demands Two Boons', type: 'explore', palette: 'dusk', width: 1300, start: 120,
+      ground: [[0, 1300]], platforms: [[600, 350, 160]],
+      items: [
+        { x: 330, label: 'Manthara', text: 'Manthara whispers into the queen’s ear in the shadowed corridor.' },
+        { x: 700, label: 'First Boon', text: 'Kaikeyi reveals the first boon she once was promised.' },
+        { x: 1050, label: 'Second Boon', text: 'Kaikeyi reveals the second boon. The palace falls silent.' }
+      ],
+      need: 3,
+      objective: 'Discover both boons and witness the decision that sends Rama into exile.',
+      ending: 'Both boons are revealed, and Rama accepts the decision of exile.' },
+
+    { title: 'Rama Goes into Exile', type: 'platform', palette: 'forest', width: 2400, start: 100,
+      ground: [[0, 500], [600, 900], [1000, 1400], [1500, 2400]],
+      platforms: [[700, 380, 120], [1150, 360, 140], [1700, 352, 140]],
+      checkpoints: [640, 1040, 1540], goal: 2260,
+      objective: 'Travel through the forest and reach the first exile campsite.',
+      ending: 'Rama, Sita and Lakshmana reach the first campsite of their exile.' },
+
+    { title: 'King Dasharatha Dies', type: 'explore', palette: 'dusk', width: 1200, start: 120,
+      ground: [[0, 1200]], platforms: [[500, 350, 180]],
+      items: [
+        { x: 260, label: 'Vasishtha', text: 'The sage Vasishtha brings grave news from Ayodhya.' },
+        { x: 600, label: 'Kaushalya', text: 'Queen Kaushalya mourns the loss of the king.' },
+        { x: 940, label: 'Bharata’s Messenger', text: 'A messenger reveals that Bharata has been called back to the capital.' }
+      ],
+      need: 3,
+      objective: 'Complete the palace narrative and reveal Bharata’s decision.',
+      ending: 'The palace mourns King Dasharatha, and Bharata’s path begins to unfold.' },
+
+    { title: 'Bharata Refuses the Throne', type: 'platform', palette: 'palace', width: 1600, start: 100,
+      ground: [[0, 1600]], platforms: [[300, 380, 120], [800, 350, 140], [1150, 380, 120]],
+      items: [{ x: 520, label: 'Sandals of Rama', text: 'Bharata takes Rama’s sandals and carries them back to Ayodhya.', required: true }],
+      goal: 1480,
+      objective: 'Carry the sandals and place them on the throne.',
+      ending: 'Bharata places Rama’s sandals on the throne and rules in his brother’s name.' },
+
+    { title: 'Surpanakha’s Encounter', type: 'platform', palette: 'forest', width: 1500, start: 100,
+      ground: [[0, 600], [700, 1500]], platforms: [[820, 360, 120]],
+      items: [{ x: 420, label: 'Surpanakha', text: 'Surpanakha approaches Rama and Lakshmana with a bold request.', required: true }],
+      goal: 1400,
+      objective: 'Complete the encounter and reach the next forest area.',
+      ending: 'The encounter sets the next forest chapter of the journey in motion.' },
+
+    { title: 'The Golden Deer', type: 'chase', palette: 'forest', width: 2200, start: 100,
+      ground: [[0, 2200]], platforms: [[500, 352, 140], [1100, 352, 160]],
+      enemies: [
+        { x: 600, y: GROUND - 44, w: 44, h: 44, kind: 'deer', minX: 560, maxX: 860, speed: 160 },
+        { x: 1000, y: GROUND - 44, w: 44, h: 44, kind: 'deer', minX: 940, maxX: 1300, speed: 200 },
+        { x: 1500, y: GROUND - 44, w: 44, h: 44, kind: 'deer', minX: 1420, maxX: 1800, speed: 180 }
+      ],
+      checkpoints: [700, 1250, 1700], goal: 2120, lives: 3,
+      objective: 'Follow the golden deer through three chase sections and reach the trigger.',
+      ending: 'Rama follows the golden deer deeper into the forest, toward the trap.' },
+
+    { title: 'Ravana Abducts Sita', type: 'chase', palette: 'dusk', width: 2100, start: 100,
+      ground: [[0, 2100]], platforms: [[600, 380, 140], [1300, 352, 140]],
+      enemies: [
+        { x: 500, y: 320, w: 60, h: 36, kind: 'chariot', minX: 450, maxX: 1000, speed: 110 },
+        { x: 1100, y: 360, w: 60, h: 36, kind: 'chariot', minX: 1000, maxX: 1500, speed: 130, dir: -1 },
+        { x: 1600, y: 320, w: 60, h: 36, kind: 'chariot', minX: 1500, maxX: 1900, speed: 150 }
+      ],
+      checkpoints: [700, 1400], goal: 2000, lives: 3,
+      objective: 'Pursue the aerial chariot and attempt to reach Ravana.',
+      ending: 'Jatayu’s challenge is met, and the pursuit of Ravana’s chariot begins.' },
+
+    { title: 'Rama Meets Hanuman', type: 'platform', palette: 'forest', width: 1700, start: 100,
+      ground: [[0, 700], [800, 1700]], platforms: [[400, 380, 120], [1000, 352, 140], [1250, 300, 120]],
+      items: [{ x: 560, label: 'Hanuman', text: 'Hanuman bows before Rama and offers his devotion.', required: true }],
+      checkpoints: [820], goal: 1620,
+      objective: 'Meet Hanuman and complete a cooperative traversal challenge.',
+      ending: 'Hanuman joins Rama’s cause, and the two cross the land together.' },
+
+    { title: 'Alliance with Sugriva', type: 'boss', palette: 'battle', width: 1400, start: 120,
+      ground: [[0, 1400]], platforms: [[560, 352, 160]], lives: 3,
+      boss: { name: 'Vali', x: 1000, hp: 3, minX: 800, maxX: 1250, speed: 70, interval: 2.4, w: 70, h: 90 },
+      objective: 'Complete the confrontation and establish the alliance with Sugriva.',
+      ending: 'With Vali defeated, Sugriva becomes Rama’s ally.' },
+
+    { title: 'Hanuman Travels to Lanka', type: 'platform', palette: 'sea', width: 3000, start: 100,
+      ground: [[0, 400], [520, 900], [1050, 1500], [1650, 2200], [2350, 3000]],
+      platforms: [[430, 360, 100], [950, 360, 100], [1560, 360, 100], [2220, 360, 100]],
+      checkpoints: [560, 1090, 1690, 2390], goal: 2900,
+      objective: 'Cross the ocean and reach Lanka.',
+      ending: 'Hanuman leaps across the ocean and reaches the shores of Lanka.' },
+
+    { title: 'Hanuman Meets Sita', type: 'explore', palette: 'lanka', width: 900, start: 100,
+      ground: [[0, 900]], platforms: [[400, 350, 140]],
+      items: [{ x: 620, label: 'Sita', text: 'Hanuman presents Rama’s ring. Sita weeps with joy and hope.' }],
+      need: 1,
+      objective: 'Reach Sita and present Rama’s ring.',
+      ending: 'Sita receives Rama’s ring, and hope returns to the Ashoka grove.' },
+
+    { title: 'Hanuman Sets Lanka Ablaze', type: 'platform', palette: 'lanka', width: 2000, start: 80,
+      ground: [[0, 300], [440, 650], [800, 1200], [1340, 2000]],
+      platforms: [[330, 370, 120], [700, 360, 120], [1000, 370, 110], [1260, 350, 100]],
+      checkpoints: [470, 830, 1370], goal: 1920,
+      objective: 'Escape the city by traversing a series of rooftops.',
+      ending: 'Hanuman escapes across the rooftops, leaving the city of Lanka in flames.' },
+
+    { title: 'The Bridge to Lanka', type: 'explore', palette: 'sea', width: 1400, start: 100,
+      ground: [[0, 1400]], platforms: [],
+      items: [
+        { x: 330, label: 'Floating Stone', text: 'A stone inscribed with Rama’s name floats upon the water.' },
+        { x: 700, label: 'Floating Stone', text: 'The vanara army lays another stone, and it holds firm.' },
+        { x: 1050, label: 'Floating Stone', text: 'The final stone is set. The bridge to Lanka is complete.' }
+      ],
+      need: 3,
+      objective: 'Complete three bridge-building puzzles.',
+      ending: 'The bridge to Lanka is complete, and the army prepares to cross.' },
+
+    { title: 'The Great War', type: 'boss', palette: 'battle', width: 1500, start: 100,
+      ground: [[0, 1500]], platforms: [[600, 352, 150], [1000, 352, 150]], lives: 3,
+      boss: { name: 'Indrajit', x: 1100, hp: 6, minX: 900, maxX: 1350, speed: 90, interval: 1.9, w: 70, h: 90 },
+      objective: 'Defeat Indrajit and rescue Lakshmana through the Sanjeevani sequence.',
+      ending: 'Indrajit falls, and Lakshmana is restored by the Sanjeevani herb.' },
+
+    { title: 'Rama Defeats Ravana', type: 'boss', palette: 'lanka', width: 1400, start: 100,
+      ground: [[0, 1400]], platforms: [[450, 352, 140], [900, 352, 140]], lives: 3,
+      boss: { name: 'Ravana', x: 1050, hp: 9, minX: 850, maxX: 1300, speed: 100, interval: 1.6, w: 80, h: 110 },
+      objective: 'Defeat Ravana by learning his attack patterns and using precise timing.',
+      ending: 'Ravana falls, and dharma is restored to the three worlds.' },
+
+    { title: 'Rama Returns to Ayodhya', type: 'platform', palette: 'palace', width: 1700, start: 100,
+      ground: [[0, 1700]], platforms: [[500, 352, 140], [1000, 352, 140]],
+      items: [
+        { x: 400, label: 'Bharata', text: 'Bharata embraces his brother at the gates of Ayodhya.', required: true },
+        { x: 800, label: 'Sita', text: 'Sita greets Rama, and the people of Ayodhya cheer.', required: true }
+      ],
+      goal: 1560,
+      objective: 'Complete the return journey and witness Rama’s coronation.',
+      ending: 'Rama is crowned king of Ayodhya, and the kingdom rejoices.' }
+  ];
+
+  // ---------- DOM ----------
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+
+  // ---------- Persistence (localStorage with safe fallbacks) ----------
+  function loadSave() {
+    const fallback = { unlocked: 1, completed: {}, best: {} };
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return fallback;
+      const data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') return fallback;
+      const unlocked = Number.isInteger(data.unlocked)
+        ? Math.min(LEVELS.length, Math.max(1, data.unlocked)) : 1;
+      const completed = {};
+      const best = {};
+      if (data.completed && typeof data.completed === 'object') {
+        Object.keys(data.completed).forEach(function (k) {
+          if (data.completed[k] === true) completed[k] = true;
+        });
+      }
+      if (data.best && typeof data.best === 'object') {
+        Object.keys(data.best).forEach(function (k) {
+          const v = data.best[k];
+          if (typeof v === 'number' && isFinite(v) && v >= 0) best[k] = v;
+        });
+      }
+      return { unlocked: unlocked, completed: completed, best: best };
+    } catch (err) {
+      return fallback;
+    }
+  }
+
+  function persist() {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
+    } catch (err) {
+      // Storage may be unavailable (private mode, file:// restrictions).
+      // Progress then lasts for the current session only.
+    }
+  }
+
+  function recordCompletion(index, time) {
+    const key = String(index + 1);
+    save.completed[key] = true;
+    const rounded = Math.round(time * 10) / 10;
+    const previous = save.best[key];
+    if (typeof previous !== 'number' || rounded < previous) save.best[key] = rounded;
+    save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, index + 2));
+    persist();
+  }
+
+  let save = loadSave();
+
+  // ---------- Audio (WebAudio, created lazily on first user gesture) ----------
+  const MUTE_KEY = 'ramayana_epic_journey_muted_v1';
+  let audioCtx = null;
+  let muted = false;
+  try { muted = window.localStorage.getItem(MUTE_KEY) === '1'; } catch (err) { muted = false; }
+
+  function ensureAudio() {
+    if (audioCtx) {
+      if (audioCtx.state === 'suspended' && audioCtx.resume) audioCtx.resume();
+      return;
+    }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        audioCtx = new AC();
+        if (audioCtx.state === 'suspended' && audioCtx.resume) audioCtx.resume();
+      }
+    } catch (err) { audioCtx = null; }
+  }
+
+  function tone(freq, dur, type, vol, slideTo, delay) {
+    if (muted || !audioCtx) return;
+    try {
+      const t0 = audioCtx.currentTime + (delay || 0);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      if (slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), t0 + dur);
+      gain.gain.setValueAtTime(vol || 0.08, t0);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    } catch (err) { /* audio is optional */ }
+  }
+
+  const SFX = {
+    shoot: function () { tone(520, 0.12, 'triangle', 0.07, 180); },
+    hit: function () { tone(660, 0.1, 'square', 0.06, 990); },
+    hurt: function () { tone(220, 0.3, 'sawtooth', 0.08, 70); },
+    jump: function () { tone(300, 0.12, 'sine', 0.06, 520); },
+    interact: function () { tone(784, 0.25, 'sine', 0.07); tone(1175, 0.3, 'sine', 0.05, null, 0.08); },
+    boss: function () { tone(140, 0.25, 'square', 0.06, 90); },
+    win: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.35, 'sine', 0.08, null, i * 0.14); }); },
+    lose: function () { tone(330, 0.5, 'sawtooth', 0.07, 110); }
+  };
+
+  function setMuted(m) {
+    muted = m;
+    const btn = document.getElementById('mute');
+    if (btn) btn.textContent = muted ? '🔇' : '🔊';
+    try { window.localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (err) { /* ignore */ }
+  }
+
+  // ---------- Game state ----------
+  let state = 'menu';          // menu | playing | paused | complete | failed
+  let L = null;                // current level runtime
+  let P = null;                // player
+  let overlayPrimary = null;   // button activated by Enter
+  const keys = {};
+  const pressed = {};          // one-frame key presses
+  const mouse = { x: W / 2, y: H / 2, clickQueued: false };
+
+  // ---------- Helpers ----------
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function overlapRect(a, b) {
+    return a.x < b.x + b.w - EPS && a.x + a.w > b.x + EPS &&
+           a.y < b.y + b.h - EPS && a.y + a.h > b.y + EPS;
+  }
+
+  function pointInRect(px, py, r, pad) {
+    return px >= r.x - pad && px <= r.x + r.w + pad &&
+           py >= r.y - pad && py <= r.y + r.h + pad;
+  }
+
+  function pointInSolid(px, py) {
+    for (const s of L.solids) {
+      if (px >= s.x && px <= s.x + s.w && py >= s.y && py <= s.y + s.h) return true;
+    }
+    return false;
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function clearKeys() {
+    for (const k in keys) keys[k] = false;
+  }
+
+  function addRing(x, y, color) {
+    L.effects.push({ kind: 'ring', x: x, y: y, color: color, life: 0.4, max: 0.4, text: '' });
+  }
+
+  function addText(x, y, text, color) {
+    L.effects.push({ kind: 'text', x: x, y: y, color: color, life: 1.0, max: 1.0, text: text });
+  }
+
+  // ---------- Overlay / menus ----------
+  function showOverlay(panel, primaryButton) {
+    overlay.innerHTML = '';
+    overlay.appendChild(panel);
+    overlay.classList.remove('hidden');
+    overlayPrimary = primaryButton || null;
+  }
+
+  function hideOverlay() {
+    overlay.classList.add('hidden');
+    overlay.innerHTML = '';
+    overlayPrimary = null;
+  }
+
+  function openPanel(title, body, buttons) {
+    const panel = el('div', 'panel');
+    panel.appendChild(el('h2', null, title));
+    if (body) panel.appendChild(el('p', null, body));
+    const row = el('div', 'btn-row');
+    let primary = null;
+    buttons.forEach(function (b) {
+      const btn = el('button', b.primary ? 'btn primary' : 'btn', b.label);
+      btn.addEventListener('click', b.onClick);
+      if (b.primary) primary = btn;
+      row.appendChild(btn);
+    });
+    panel.appendChild(row);
+    showOverlay(panel, primary);
+  }
+
+  function showMenu() {
+    state = 'menu';
+    L = null;
+    P = null;
+    const panel = el('div', 'panel');
+    panel.appendChild(el('h1', null, 'Ramayana: The Epic Journey'));
+    panel.appendChild(el('p', null,
+      'Twenty chapters of the Ramayana, told through exploration, archery, platforming, and battle. ' +
+      'Complete a chapter to unlock the next.'));
+
+    const grid = el('div', 'chapters');
+    LEVELS.forEach(function (cfg, i) {
+      const key = String(i + 1);
+      const unlocked = i + 1 <= save.unlocked;
+      const btn = el('button', 'btn chapter', (i + 1) + '. ' + cfg.title);
+      let status;
+      if (!unlocked) status = '🔒 Locked';
+      else if (save.completed[key]) {
+        status = typeof save.best[key] === 'number'
+          ? '✓ Best ' + save.best[key].toFixed(1) + 's' : '✓ Completed';
+      } else status = 'Available';
+      btn.appendChild(el('small', null, status));
+      btn.disabled = !unlocked;
+      btn.addEventListener('click', function () { startLevel(i); });
+      grid.appendChild(btn);
+    });
+    panel.appendChild(grid);
+
+    const continueIndex = Math.min(LEVELS.length, save.unlocked) - 1;
+    const row = el('div', 'btn-row');
+    const cont = el('button', 'btn primary', 'Continue Journey');
+    cont.addEventListener('click', function () { startLevel(continueIndex); });
+    const reset = el('button', 'btn', 'Reset Progress');
+    reset.addEventListener('click', function () {
+      if (window.confirm('Reset all saved progress?')) {
+        save = { unlocked: 1, completed: {}, best: {} };
+        persist();
+        showMenu();
+      }
+    });
+    row.appendChild(cont);
+    row.appendChild(reset);
+    panel.appendChild(row);
+
+    panel.appendChild(el('p', 'help',
+      'Controls: A/D or ←/→ move · Shift sprint · Space / W / ↑ jump · Mouse aim + left click to shoot · ' +
+      'E interact · Esc pause · On touch screens use the on-screen buttons and tap the scene to shoot'));
+    panel.appendChild(el('p', 'fine', 'Progress is saved in this browser.'));
+    showOverlay(panel, cont);
+  }
+
+  function pause() {
+    if (state !== 'playing') return;
+    state = 'paused';
+    clearKeys();
+    mouse.clickQueued = false;
+    openPanel('Paused', 'The journey waits for you.', [
+      { label: 'Resume', primary: true, onClick: resume },
+      { label: 'Restart Chapter', onClick: function () { startLevel(L.idx); } },
+      { label: 'Chapters', onClick: showMenu }
+    ]);
+  }
+
+  function resume() {
+    if (state !== 'paused') return;
+    state = 'playing';
+    hideOverlay();
+  }
+
+  function completeLevel() {
+    if (state !== 'playing') return;
+    state = 'complete';
+    SFX.win();
+    const index = L.idx;
+    recordCompletion(index, L.t);
+    const isLast = index >= LEVELS.length - 1;
+    const buttons = [];
+    if (!isLast) buttons.push({ label: 'Next Chapter', primary: true, onClick: function () { startLevel(index + 1); } });
+    buttons.push({ label: 'Replay Chapter', primary: isLast, onClick: function () { startLevel(index); } });
+    buttons.push({ label: 'Chapters', onClick: showMenu });
+    const title = isLast ? 'The Epic Concludes' : 'Chapter ' + (index + 1) + ' Complete';
+    openPanel(title, LEVELS[index].ending + '  (Time: ' + L.t.toFixed(1) + 's)', buttons);
+  }
+
+  function failLevel(message) {
+    if (state !== 'playing') return;
+    state = 'failed';
+    SFX.lose();
+    const index = L.idx;
+    openPanel('Chapter Failed', message, [
+      { label: 'Retry', primary: true, onClick: function () { startLevel(index); } },
+      { label: 'Chapters', onClick: showMenu }
+    ]);
+  }
+
+  // ---------- Level setup ----------
+  function createRuntime(index) {
+    const cfg = JSON.parse(JSON.stringify(LEVELS[index]));
+    const solids = [];
+    for (const seg of cfg.ground) {
+      solids.push({ x: seg[0], y: GROUND, w: seg[1] - seg[0], h: H - GROUND + 200, ground: true });
+    }
+    for (const p of cfg.platforms || []) {
+      solids.push({ x: p[0], y: p[1], w: p[2], h: 20, ground: false });
+    }
+    const items = (cfg.items || []).map(function (it) {
+      return { x: it.x, y: GROUND - 40, label: it.label, text: it.text, required: !!it.required, done: false };
+    });
+    const targets = (cfg.targets || []).map(function (t) { return { x: t[0], y: t[1], hit: false }; });
+    const enemies = (cfg.enemies || []).map(function (e) {
+      return {
+        x: e.x, y: e.y, w: e.w, h: e.h, kind: e.kind || 'rakshasa',
+        minX: e.minX, maxX: e.maxX,
+        vx: e.speed * (e.dir === -1 ? -1 : 1),
+        dead: false
+      };
+    });
+    let boss = null;
+    if (cfg.boss) {
+      const b = cfg.boss;
+      boss = {
+        name: b.name, x: b.x, y: GROUND - b.h, w: b.w, h: b.h,
+        hp: b.hp, maxHp: b.hp, minX: b.minX, maxX: b.maxX,
+        speed: b.speed, dir: 1, interval: b.interval, shootT: 1.5, flash: 0
+      };
+    }
+    let need = cfg.need;
+    if (need === undefined) need = cfg.type === 'archery' ? targets.length : items.length;
+    return {
+      idx: index, cfg: cfg, solids: solids, items: items, targets: targets,
+      enemies: enemies, boss: boss, need: need,
+      t: 0, camX: 0, width: cfg.width, checkpointX: cfg.start,
+      lives: cfg.lives === undefined ? 3 : cfg.lives,
+      hits: 0, kills: 0, arrows: [], fireballs: [], effects: [], dialog: null,
+      finishTimer: -1,
+      ritualHp: cfg.ritualHp || 0, waveIdx: 0, toSpawn: 0, spawnT: 0, restT: 1.5
+    };
+  }
+
+  function createPlayer() {
+    return {
+      x: L.cfg.start, y: 200, w: PLAYER_W, h: PLAYER_H,
+      vx: 0, vy: 0, onGround: false, facing: 1,
+      jumpBuf: 0, cool: 0, invuln: 0
+    };
+  }
+
+  function startLevel(index) {
+    L = createRuntime(index);
+    P = createPlayer();
+    state = 'playing';
+    clearKeys();
+    mouse.clickQueued = false;
+    hideOverlay();
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+  }
+
+  // ---------- Physics ----------
+  function movePlayer(dt) {
+    const p = P;
+    const dist = Math.max(Math.abs(p.vx), Math.abs(p.vy)) * dt;
+    const steps = Math.max(1, Math.ceil(dist / 6));   // sub-steps prevent tunnelling through thin platforms
+    const sdt = dt / steps;
+    for (let i = 0; i < steps; i++) {
+      p.x += p.vx * sdt;
+      for (const s of L.solids) {
+        if (overlapRect(p, s)) {
+          if (p.vx > 0) p.x = s.x - p.w;
+          else if (p.vx < 0) p.x = s.x + s.w;
+        }
+      }
+      p.y += p.vy * sdt;
+      for (const s of L.solids) {
+        if (overlapRect(p, s)) {
+          if (p.vy >= 0) p.y = s.y - p.h;
+          else p.y = s.y + s.h;
+          p.vy = 0;
+        }
+      }
+    }
+    p.onGround = false;
+    for (const s of L.solids) {
+      if (p.x + p.w > s.x + EPS && p.x < s.x + s.w - EPS && Math.abs(p.y + p.h - s.y) < 0.6) {
+        p.onGround = true;
+        break;
+      }
+    }
+  }
+
+  function aimVector() {
+    const sx = P.x + P.w / 2 - L.camX;
+    const sy = P.y + 24;
+    const dx = mouse.x - sx;
+    const dy = mouse.y - sy;
+    const len = Math.hypot(dx, dy) || 1;
+    return { ux: dx / len, uy: dy / len };
+  }
+
+  function shoot() {
+    const v = aimVector();
+    L.arrows.push({
+      x: P.x + P.w / 2 + v.ux * 18,
+      y: P.y + 24 + v.uy * 18,
+      vx: v.ux * ARROW_SPEED,
+      vy: v.uy * ARROW_SPEED,
+      life: ARROW_LIFE,
+      dead: false
+    });
+    P.facing = v.ux >= 0 ? 1 : -1;
+    P.cool = SHOOT_COOLDOWN;
+    SFX.shoot();
+  }
+
+  function respawn() {
+    P.x = L.checkpointX;
+    P.y = 120;
+    P.vx = 0;
+    P.vy = 0;
+    P.onGround = false;
+    P.invuln = INVULN_TIME;
+    P.cool = 0;
+    L.fireballs = [];
+  }
+
+  function hurt(reason) {
+    if (state !== 'playing') return;
+    if (L.finishTimer >= 0) return;                 // objective reached: the win is final
+    if (reason !== 'fall' && P.invuln > 0) return;
+    L.lives -= 1;
+    SFX.hurt();
+    addText(P.x + P.w / 2, P.y - 12, '-1 ♥', '#ff8a7a');
+    if (L.lives <= 0) {
+      failLevel(FAIL_MESSAGES[reason] || 'Rama has fallen.');
+      return;
+    }
+    respawn();
+  }
+
+  function goalRect() {
+    return { x: L.cfg.goal, y: GROUND - 150, w: 30, h: 150 };
+  }
+
+  function doneCount() {
+    let n = 0;
+    for (const it of L.items) if (it.done) n++;
+    return n;
+  }
+
+  function requiredItemsDone() {
+    for (const it of L.items) if (it.required && !it.done) return false;
+    return true;
+  }
+
+  function interact() {
+    let best = null;
+    let bestDist = Infinity;
+    const cx = P.x + P.w / 2;
+    const cy = P.y + P.h / 2;
+    for (const it of L.items) {
+      if (it.done) continue;
+      const d = Math.hypot(it.x - cx, it.y - cy);
+      if (d < bestDist) { bestDist = d; best = it; }
+    }
+    if (best && bestDist < INTERACT_RANGE) {
+      best.done = true;
+      L.dialog = { speaker: best.label, text: best.text, t: 5 };
+      SFX.interact();
+      addText(best.x, best.y - 40, '✓', '#ffd24a');
+    }
+  }
+
+  // ---------- Update ----------
+  function update(dt) {
+    const cfg = L.cfg;
+    L.t += dt;
+    if (L.dialog) {
+      L.dialog.t -= dt;
+      if (L.dialog.t <= 0) L.dialog = null;
+    }
+    P.cool = Math.max(0, P.cool - dt);
+    P.invuln = Math.max(0, P.invuln - dt);
+    P.jumpBuf = Math.max(0, P.jumpBuf - dt);
+
+    const frozen = L.finishTimer >= 0;              // objective reached: hold still while the win plays out
+
+    if (!frozen && (pressed.Space || pressed.KeyW || pressed.ArrowUp)) P.jumpBuf = JUMP_BUFFER;
+    if (!frozen && pressed.KeyE) interact();
+
+    const left = keys.KeyA || keys.ArrowLeft;
+    const right = keys.KeyD || keys.ArrowRight;
+    const ax = frozen ? 0 : (right ? 1 : 0) - (left ? 1 : 0);
+    const sprint = keys.ShiftLeft || keys.ShiftRight;
+    P.vx = ax * MOVE_SPEED * (sprint ? 1.5 : 1);
+    if (ax !== 0) P.facing = ax;
+    if (P.jumpBuf > 0 && P.onGround) {
+      P.vy = -JUMP_SPEED;
+      P.onGround = false;
+      P.jumpBuf = 0;
+      SFX.jump();
+    }
+
+    if (mouse.clickQueued) {
+      mouse.clickQueued = false;
+      if (!frozen && cfg.type !== 'explore' && P.cool <= 0) shoot();
+    }
+
+    P.vy = Math.min(P.vy + GRAVITY * dt, MAX_FALL);
+    movePlayer(dt);
+
+    if (P.y > H + 120) {
+      hurt('fall');
+      if (state !== 'playing') return;
+    }
+
+    for (const cp of cfg.checkpoints || []) {
+      if (P.x >= cp && cp > L.checkpointX) L.checkpointX = cp;
+    }
+
+    updateEnemies(dt);
+    if (state !== 'playing') return;
+    updateBoss(dt);
+    updateFireballs(dt);
+    if (state !== 'playing') return;
+    updateArrows(dt);
+    updateDefense(dt);
+    if (state !== 'playing') return;
+    checkObjectives(dt);
+    if (state !== 'playing') return;
+    updateEffects(dt);
+
+    const maxCam = Math.max(0, L.width - W);
+    const target = clamp(P.x + P.w / 2 - W * 0.45, 0, maxCam);
+    L.camX += (target - L.camX) * Math.min(1, dt * 8);
+  }
+
+  function updateEnemies(dt) {
+    for (const e of L.enemies) {
+      e.x += e.vx * dt;
+      if (e.minX !== undefined) {
+        if (e.x < e.minX) { e.x = e.minX; e.vx = Math.abs(e.vx); }
+        else if (e.x > e.maxX) { e.x = e.maxX; e.vx = -Math.abs(e.vx); }
+      }
+    }
+    if (L.cfg.type === 'chase') {
+      for (const e of L.enemies) {
+        if (P.invuln <= 0 && overlapRect(P, e)) {
+          hurt('hit');
+          return;
+        }
+      }
+    }
+  }
+
+  function updateBoss(dt) {
+    const b = L.boss;
+    if (!b) return;
+    b.flash = Math.max(0, b.flash - dt);
+    if (b.hp <= 0) return;
+    b.x += b.dir * b.speed * dt;
+    if (b.x < b.minX) { b.x = b.minX; b.dir = 1; }
+    else if (b.x > b.maxX) { b.x = b.maxX; b.dir = -1; }
+    b.shootT -= dt;
+    if (b.shootT <= 0) {
+      const enraged = b.hp <= b.maxHp / 2;
+      b.shootT = b.interval * (enraged ? 0.7 : 1);
+      const cx = b.x + b.w / 2;
+      const dir = (P.x + P.w / 2 < cx) ? -1 : 1;
+      L.fireballs.push({ x: cx, y: GROUND - 50, vx: dir * (enraged ? 380 : 320), r: 11, life: 4, dead: false });
+    }
+  }
+
+  function updateFireballs(dt) {
+    for (const f of L.fireballs) {
+      f.x += f.vx * dt;
+      f.life -= dt;
+      if (f.life <= 0) { f.dead = true; continue; }
+      if (P.invuln <= 0 && overlapRect(P, { x: f.x - f.r, y: f.y - f.r, w: f.r * 2, h: f.r * 2 })) {
+        f.dead = true;
+        hurt('fireball');
+        if (state !== 'playing') return;
+      }
+    }
+    L.fireballs = L.fireballs.filter(function (f) { return !f.dead; });
+  }
+
+  function updateArrows(dt) {
+    const type = L.cfg.type;
+    for (const a of L.arrows) {
+      if (a.dead) continue;
+      a.vy += ARROW_GRAVITY * dt;
+      a.x += a.vx * dt;
+      a.y += a.vy * dt;
+      a.life -= dt;
+      if (a.life <= 0 || a.y > H + 100 || a.x < -300 || a.x > L.width + 300 || pointInSolid(a.x, a.y)) {
+        a.dead = true;
+        continue;
+      }
+      if (type === 'archery') {
+        for (const t of L.targets) {
+          if (!t.hit && Math.hypot(a.x - t.x, a.y - t.y) < 24) {
+            t.hit = true;
+            L.hits += 1;
+            a.dead = true;
+            addRing(t.x, t.y, '#ffd24a');
+            addText(t.x, t.y - 34, 'Hit!', '#ffd24a');
+            SFX.hit();
+            break;
+          }
+        }
+      } else if (type === 'defense') {
+        for (const e of L.enemies) {
+          if (!e.dead && pointInRect(a.x, a.y, e, 3)) {
+            e.dead = true;
+            a.dead = true;
+            L.kills += 1;
+            SFX.hit();
+            addRing(e.x + e.w / 2, e.y + e.h / 2, '#ffe08a');
+            break;
+          }
+        }
+      } else if (type === 'boss' && L.boss && L.boss.hp > 0) {
+        if (pointInRect(a.x, a.y, L.boss, 0)) {
+          L.boss.hp -= 1;
+          L.boss.flash = 0.25;
+          SFX.boss();
+          a.dead = true;
+          addRing(a.x, a.y, '#ffcc66');
+          if (L.boss.hp <= 0) addText(L.boss.x + L.boss.w / 2, L.boss.y - 30, 'Defeated!', '#ffd24a');
+        }
+      }
+    }
+    L.arrows = L.arrows.filter(function (a) { return !a.dead; });
+  }
+
+  function updateDefense(dt) {
+    const c = L.cfg;
+    if (c.type !== 'defense') return;
+    for (const e of L.enemies) {
+      if (!e.dead && e.x <= c.ritualX + 30) {
+        e.dead = true;
+        L.ritualHp -= 1;
+        addText(c.ritualX, GROUND - 90, '-1 Ritual', '#ff9a6b');
+      }
+    }
+    L.enemies = L.enemies.filter(function (e) { return !e.dead; });
+    if (L.ritualHp <= 0) {
+      failLevel('The ritual fire was extinguished before the waves were defeated.');
+      return;
+    }
+    if (L.toSpawn > 0) {
+      L.spawnT -= dt;
+      if (L.spawnT <= 0) {
+        const lo = c.enemySpeed[0], hi = c.enemySpeed[1];
+        L.enemies.push({
+          x: c.width - 40, y: GROUND - 44, w: 34, h: 44,
+          kind: 'rakshasa', vx: -(lo + Math.random() * (hi - lo)), dead: false
+        });
+        L.toSpawn -= 1;
+        L.spawnT = c.spawnInterval;
+        if (L.toSpawn === 0) L.restT = 2.5;
+      }
+    } else if (L.enemies.length === 0 && L.waveIdx < c.waves.length) {
+      L.restT -= dt;
+      if (L.restT <= 0) {
+        L.toSpawn = c.waves[L.waveIdx];
+        L.waveIdx += 1;
+        L.spawnT = 0;
+      }
+    }
+  }
+
+  function checkObjectives(dt) {
+    const cfg = L.cfg;
+    let done = false;
+    switch (cfg.type) {
+      case 'explore':
+        done = doneCount() >= L.need;
+        break;
+      case 'archery':
+        done = L.hits >= L.need;
+        break;
+      case 'defense':
+        done = L.waveIdx >= cfg.waves.length && L.toSpawn === 0 && L.enemies.length === 0;
+        break;
+      case 'boss':
+        done = !!L.boss && L.boss.hp <= 0;
+        break;
+      case 'platform':
+      case 'chase':
+        done = overlapRect(P, goalRect()) && requiredItemsDone();
+        break;
+      default:
+        break;
+    }
+    if (done && L.finishTimer < 0) L.finishTimer = 1.2;
+    if (L.finishTimer >= 0) {
+      L.finishTimer -= dt;
+      if (L.finishTimer <= 0) completeLevel();
+    }
+  }
+
+  function updateEffects(dt) {
+    for (const f of L.effects) {
+      f.life -= dt;
+      if (f.kind === 'text') f.y -= 30 * dt;
+    }
+    L.effects = L.effects.filter(function (f) { return f.life > 0; });
+  }
+
+  // ---------- Rendering ----------
+  function hudPanel(x, y, w, h) {
+    ctx.fillStyle = 'rgba(20, 10, 4, 0.68)';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#d4a036';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  }
+
+  function wrapText(text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (line && ctx.measureText(test).width > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function progressText() {
+    const c = L.cfg;
+    switch (c.type) {
+      case 'explore':
+        return 'Story moments: ' + doneCount() + '/' + L.need;
+      case 'archery':
+        return 'Targets hit: ' + L.hits + '/' + L.need;
+      case 'defense':
+        return 'Wave ' + Math.min(L.waveIdx, c.waves.length) + '/' + c.waves.length +
+               ' · Ritual ' + Math.max(0, L.ritualHp) + '/' + c.ritualHp;
+      case 'boss':
+        return L.boss ? 'Defeat ' + L.boss.name : '';
+      case 'platform': {
+        const req = L.items.filter(function (i) { return i.required; });
+        if (req.length === 0) return 'Reach the goal';
+        const got = req.filter(function (i) { return i.done; }).length;
+        return 'Sacred moments: ' + got + '/' + req.length + ' · Reach the goal';
+      }
+      case 'chase':
+        return 'Avoid the hazards · Reach the goal';
+      default:
+        return '';
+    }
+  }
+
+  function drawBackground(pal, camX) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, pal.sky1);
+    g.addColorStop(1, pal.sky2);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255, 240, 200, 0.22)';
+    ctx.beginPath();
+    ctx.arc(760, 120, 90, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = pal.far;
+    const period = 220;
+    const off = ((camX * 0.3) % period + period) % period;
+    for (let i = -1; i <= Math.ceil(W / period) + 1; i++) {
+      const bx = i * period - off;
+      const peak = 120 + (((i * 37) % 5 + 5) % 5) * 18;
+      ctx.beginPath();
+      ctx.moveTo(bx, GROUND);
+      ctx.lineTo(bx + period / 2, GROUND - peak);
+      ctx.lineTo(bx + period, GROUND);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawPit(pal) {
+    ctx.fillStyle = pal.water || 'rgba(0, 0, 0, 0.55)';
+    ctx.fillRect(0, GROUND, W, H - GROUND);
+    if (pal.water) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.lineWidth = 2;
+      for (let y = GROUND + 20; y < H; y += 26) {
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 16) {
+          const wy = y + Math.sin((x + L.t * 60) * 0.03) * 3;
+          if (x === 0) ctx.moveTo(x, wy); else ctx.lineTo(x, wy);
+        }
+        ctx.stroke();
+      }
+    }
+  }
+
+  function drawTerrain(pal) {
+    for (const s of L.solids) {
+      const sx = s.x - L.camX;
+      if (sx + s.w < -10 || sx > W + 10) continue;
+      ctx.fillStyle = pal.ground;
+      ctx.fillRect(sx, s.y, s.w, s.h);
+      ctx.fillStyle = pal.top;
+      ctx.fillRect(sx, s.y, s.w, s.ground ? 8 : 4);
+    }
+  }
+
+  function drawRitual() {
+    const c = L.cfg;
+    if (c.type !== 'defense') return;
+    const x = c.ritualX - L.camX;
+    ctx.fillStyle = '#6b4a2b';
+    ctx.fillRect(x - 22, GROUND - 40, 44, 40);
+    ctx.fillStyle = '#ff8c1a';
+    ctx.beginPath();
+    ctx.ellipse(x, GROUND - 56, 12, 18 + Math.sin(L.t * 12) * 3, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#ffe27a';
+    ctx.beginPath();
+    ctx.ellipse(x, GROUND - 52, 6, 10, 0, 0, TAU);
+    ctx.fill();
+  }
+
+  function drawGoal() {
+    if (L.cfg.goal === undefined) return;
+    const gx = L.cfg.goal - L.camX;
+    const active = requiredItemsDone();
+    ctx.fillStyle = '#8b6b3e';
+    ctx.fillRect(gx, GROUND - 150, 6, 150);
+    ctx.fillStyle = active ? '#ffd24a' : '#777';
+    ctx.beginPath();
+    ctx.moveTo(gx + 6, GROUND - 150);
+    ctx.lineTo(gx + 40, GROUND - 135);
+    ctx.lineTo(gx + 6, GROUND - 120);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawItems() {
+    for (const it of L.items) {
+      const x = it.x - L.camX;
+      if (x < -80 || x > W + 80) continue;
+      const pulse = 0.5 + 0.5 * Math.sin(L.t * 4 + it.x);
+      ctx.globalAlpha = it.done ? 0.35 : 1;
+      ctx.fillStyle = it.done ? '#999' : 'rgba(255, 215, 100, ' + (0.35 + 0.25 * pulse) + ')';
+      ctx.beginPath();
+      ctx.arc(x, it.y, 16, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = '#fff6d6';
+      ctx.beginPath();
+      ctx.arc(x, it.y, 6, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'center';
+      ctx.font = '13px Georgia';
+      ctx.fillStyle = '#ffe9b0';
+      ctx.fillText((it.done ? '✓ ' : '') + it.label, x, it.y - 26);
+      if (!it.done && Math.hypot(it.x - (P.x + P.w / 2), it.y - (P.y + P.h / 2)) < INTERACT_RANGE) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('[E]', x, it.y + 34);
+      }
+    }
+  }
+
+  function drawTargets() {
+    for (const t of L.targets) {
+      const x = t.x - L.camX;
+      if (x < -40 || x > W + 40) continue;
+      ctx.fillStyle = t.hit ? '#888' : '#c0392b';
+      ctx.beginPath(); ctx.arc(x, t.y, 22, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(x, t.y, 15, 0, TAU); ctx.fill();
+      ctx.fillStyle = t.hit ? '#888' : '#c0392b';
+      ctx.beginPath(); ctx.arc(x, t.y, 9, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffd24a';
+      ctx.beginPath(); ctx.arc(x, t.y, 4, 0, TAU); ctx.fill();
+    }
+  }
+
+  function drawEnemies() {
+    for (const e of L.enemies) {
+      const x = e.x - L.camX;
+      if (x < -80 || x > W + 80) continue;
+      const y = e.y;
+      if (e.kind === 'deer') {
+        ctx.fillStyle = '#d9a441';
+        ctx.beginPath(); ctx.ellipse(x + e.w / 2, y + e.h / 2 + 4, e.w / 2, e.h / 3, 0, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + e.w - 6, y + 8, 7, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#f5e2a8'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + e.w - 4, y + 2); ctx.lineTo(x + e.w + 6, y - 8);
+        ctx.moveTo(x + e.w - 2, y + 2); ctx.lineTo(x + e.w + 2, y - 10);
+        ctx.stroke();
+      } else if (e.kind === 'chariot') {
+        ctx.fillStyle = '#5b3a7a';
+        ctx.fillRect(x, y, e.w, e.h);
+        ctx.fillStyle = '#ffd24a';
+        ctx.fillRect(x + 6, y + 8, 10, 6);
+        ctx.fillRect(x + e.w - 16, y + 8, 10, 6);
+        ctx.fillStyle = '#2a1a33';
+        ctx.beginPath(); ctx.arc(x + 14, y + e.h, 7, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + e.w - 14, y + e.h, 7, 0, TAU); ctx.fill();
+      } else {
+        ctx.fillStyle = '#7a1f2b';
+        ctx.fillRect(x + 4, y + 14, e.w - 8, e.h - 14);
+        ctx.beginPath(); ctx.arc(x + e.w / 2, y + 10, 10, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#ffe066';
+        ctx.fillRect(x + e.w / 2 - 6, y + 8, 3, 3);
+        ctx.fillRect(x + e.w / 2 + 3, y + 8, 3, 3);
+      }
+    }
+  }
+
+  function drawBoss() {
+    const b = L.boss;
+    if (!b) return;
+    const x = b.x - L.camX;
+    if (x < -150 || x > W + 150) return;
+    const y = b.y;
+    ctx.fillStyle = b.flash > 0 ? '#ffffff' : '#4a1a3f';
+    ctx.fillRect(x, y + b.h * 0.35, b.w, b.h * 0.65);
+    ctx.beginPath(); ctx.arc(x + b.w / 2, y + b.h * 0.3, b.w * 0.3, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8a2b6b';
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.arc(x + b.w * (0.2 + i * 0.15), y + 6, 5, 0, TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#ffd24a';
+    ctx.beginPath();
+    ctx.moveTo(x + b.w * 0.25, y + b.h * 0.12);
+    ctx.lineTo(x + b.w / 2, y - 4);
+    ctx.lineTo(x + b.w * 0.75, y + b.h * 0.12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffe9b0';
+    ctx.fillRect(x + b.w * 0.3, y + b.h * 0.3, 4, 3);
+    ctx.fillRect(x + b.w * 0.6, y + b.h * 0.3, 4, 3);
+  }
+
+  function drawFireballs() {
+    for (const f of L.fireballs) {
+      const x = f.x - L.camX;
+      if (x < -40 || x > W + 40) continue;
+      ctx.fillStyle = '#ff7a1a';
+      ctx.beginPath(); ctx.arc(x, f.y, f.r, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffd27a';
+      ctx.beginPath(); ctx.arc(x, f.y, f.r * 0.5, 0, TAU); ctx.fill();
+    }
+  }
+
+  function drawArrows() {
+    for (const a of L.arrows) {
+      const speed = Math.hypot(a.vx, a.vy) || 1;
+      const ux = a.vx / speed, uy = a.vy / speed;
+      const x = a.x - L.camX;
+      ctx.strokeStyle = '#e8d5a0';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - ux * 16, a.y - uy * 16);
+      ctx.lineTo(x, a.y);
+      ctx.stroke();
+      ctx.fillStyle = '#c0c0c0';
+      ctx.beginPath(); ctx.arc(x, a.y, 2.5, 0, TAU); ctx.fill();
+    }
+  }
+
+  function drawPlayer() {
+    if (P.invuln > 0 && Math.floor(L.t * 12) % 2 === 0) return;
+    const x = P.x - L.camX;
+    const y = P.y;
+    const cx = x + P.w / 2;
+    const aim = aimVector();
+    const sx = cx, sy = y + 24;
+    const ang = Math.atan2(aim.uy, aim.ux);
+    const a1 = ang - 0.9, a2 = ang + 0.9;
+    ctx.strokeStyle = '#7a4a1f';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 20, a1, a2);
+    ctx.stroke();
+    ctx.strokeStyle = '#e8d5a0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(sx + Math.cos(a1) * 20, sy + Math.sin(a1) * 20);
+    ctx.lineTo(sx + Math.cos(a2) * 20, sy + Math.sin(a2) * 20);
+    ctx.stroke();
+
+    ctx.fillStyle = '#f2a71b';
+    ctx.fillRect(x + 4, y + 36, P.w - 8, 14);
+    ctx.fillStyle = '#2e5fb8';
+    ctx.fillRect(x + 6, y + 18, P.w - 12, 20);
+    ctx.fillStyle = '#4a2a14';
+    ctx.fillRect(x + 8, y + 50, 7, 10);
+    ctx.fillRect(x + P.w - 15, y + 50, 7, 10);
+    ctx.fillStyle = '#2e5fb8';
+    ctx.beginPath(); ctx.arc(cx, y + 10, 9, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffd24a';
+    ctx.fillRect(cx - 7, y - 2, 14, 4);
+  }
+
+  function drawEffects() {
+    for (const f of L.effects) {
+      const a = clamp(f.life / f.max, 0, 1);
+      ctx.globalAlpha = a;
+      if (f.kind === 'ring') {
+        ctx.strokeStyle = f.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(f.x - L.camX, f.y, 8 + (1 - a) * 36, 0, TAU);
+        ctx.stroke();
+      } else {
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 15px Georgia';
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.text, f.x - L.camX, f.y);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawHud() {
+    const cfg = L.cfg;
+    hudPanel(12, 12, 440, 64);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffd77a';
+    ctx.font = 'bold 17px Georgia';
+    ctx.fillText('Chapter ' + (L.idx + 1) + ': ' + cfg.title, 24, 36);
+    ctx.fillStyle = '#f7e7c1';
+    ctx.font = '14px Georgia';
+    ctx.fillText(progressText(), 24, 60);
+
+    hudPanel(W - 232, 12, 220, 56);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#f7e7c1';
+    ctx.font = '14px Georgia';
+    ctx.fillText('Time ' + L.t.toFixed(1) + 's', W - 24, 32);
+    if (LIFE_TYPES.indexOf(cfg.type) !== -1) {
+      ctx.fillStyle = '#ff8a7a';
+      ctx.font = '18px Georgia';
+      ctx.fillText('♥'.repeat(Math.max(0, L.lives)) || '—', W - 24, 58);
+    }
+
+    if (L.boss) {
+      const b = L.boss;
+      hudPanel(W / 2 - 180, 84, 360, 44);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd77a';
+      ctx.font = 'bold 14px Georgia';
+      ctx.fillText(b.name, W / 2, 102);
+      ctx.fillStyle = '#3a1212';
+      ctx.fillRect(W / 2 - 160, 110, 320, 10);
+      ctx.fillStyle = '#e0543c';
+      ctx.fillRect(W / 2 - 160, 110, 320 * clamp(b.hp / b.maxHp, 0, 1), 10);
+    }
+  }
+
+  function drawDialog() {
+    const d = L.dialog;
+    if (!d) return;
+    const bx = 40, by = H - 132, bw = W - 80, bh = 110;
+    ctx.fillStyle = 'rgba(20, 10, 4, 0.85)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = '#d4a036';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffd77a';
+    ctx.font = 'bold 16px Georgia';
+    ctx.fillText(d.speaker, bx + 18, by + 26);
+    ctx.fillStyle = '#f7e7c1';
+    ctx.font = '15px Georgia';
+    const lines = wrapText(d.text, bw - 36);
+    lines.slice(0, 3).forEach(function (ln, i) {
+      ctx.fillText(ln, bx + 18, by + 50 + i * 20);
+    });
+  }
+
+  function drawCrosshair() {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 8, 0, TAU);
+    ctx.moveTo(mouse.x - 12, mouse.y); ctx.lineTo(mouse.x - 4, mouse.y);
+    ctx.moveTo(mouse.x + 4, mouse.y); ctx.lineTo(mouse.x + 12, mouse.y);
+    ctx.moveTo(mouse.x, mouse.y - 12); ctx.lineTo(mouse.x, mouse.y - 4);
+    ctx.moveTo(mouse.x, mouse.y + 4); ctx.lineTo(mouse.x, mouse.y + 12);
+    ctx.stroke();
+  }
+
+  function drawTitle() {
+    drawBackground(PALETTES.palace, 0);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd77a';
+    ctx.font = 'bold 56px Georgia';
+    ctx.fillText('RAMAYANA', W / 2, H / 2 - 20);
+    ctx.fillStyle = '#f7e7c1';
+    ctx.font = '22px Georgia';
+    ctx.fillText('The Epic Journey', W / 2, H / 2 + 22);
+  }
+
+  function render() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (!L) {
+      drawTitle();
+      return;
+    }
+    const pal = PALETTES[L.cfg.palette] || PALETTES.palace;
+    drawBackground(pal, L.camX);
+    drawPit(pal);
+    drawTerrain(pal);
+    drawRitual();
+    drawGoal();
+    drawItems();
+    drawTargets();
+    drawEnemies();
+    drawBoss();
+    drawFireballs();
+    drawArrows();
+    drawPlayer();
+    drawEffects();
+    drawHud();
+    drawDialog();
+    if (state === 'playing') drawCrosshair();
+  }
+
+  // ---------- Input ----------
+  const PREVENT_KEYS = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+  window.addEventListener('keydown', function (e) {
+    ensureAudio();
+    const c = e.code;
+    if (PREVENT_KEYS.indexOf(c) !== -1) e.preventDefault();
+    if (c === 'Enter' && overlayPrimary && !overlay.classList.contains('hidden')) {
+      e.preventDefault();
+      overlayPrimary.click();
+      return;
+    }
+    if (c === 'Escape') {
+      if (state === 'playing') pause();
+      else if (state === 'paused') resume();
+      return;
+    }
+    if (!e.repeat) pressed[c] = true;
+    keys[c] = true;
+  });
+
+  window.addEventListener('keyup', function (e) {
+    keys[e.code] = false;
+  });
+
+  window.addEventListener('blur', clearKeys);
+
+  function toCanvas(e) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) * W / r.width,
+      y: (e.clientY - r.top) * H / r.height
+    };
+  }
+
+  canvas.addEventListener('pointermove', function (e) {
+    const p = toCanvas(e);
+    mouse.x = p.x;
+    mouse.y = p.y;
+  });
+
+  canvas.addEventListener('pointerdown', function (e) {
+    ensureAudio();
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const p = toCanvas(e);
+    mouse.x = p.x;
+    mouse.y = p.y;
+    if (state === 'playing') mouse.clickQueued = true;
+  });
+
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  // On-screen buttons (shown on touch devices). Tap anywhere on the scene to aim and shoot.
+  const touchLayer = document.getElementById('touch');
+  const isTouch = ('ontouchstart' in window) ||
+    (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  if (isTouch && touchLayer) touchLayer.classList.add('on');
+
+  Array.prototype.forEach.call(touchLayer ? touchLayer.querySelectorAll('.tbtn') : [], function (btn) {
+    const code = btn.getAttribute('data-key');
+    function down(e) {
+      e.preventDefault();
+      ensureAudio();
+      btn.classList.add('active');
+      if (code === 'Escape') {
+        if (state === 'playing') pause();
+        else if (state === 'paused') resume();
+        return;
+      }
+      keys[code] = true;
+      pressed[code] = true;
+    }
+    function up(e) {
+      e.preventDefault();
+      btn.classList.remove('active');
+      keys[code] = false;
+    }
+    btn.addEventListener('pointerdown', down);
+    btn.addEventListener('pointerup', up);
+    btn.addEventListener('pointercancel', up);
+    btn.addEventListener('pointerleave', up);
+  });
+
+  const muteBtn = document.getElementById('mute');
+  if (muteBtn) {
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    muteBtn.addEventListener('click', function () {
+      ensureAudio();
+      setMuted(!muted);
+      muteBtn.blur();
+    });
+  }
+
+  // ---------- Main loop ----------
+  let lastTime = performance.now();
+
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0, (now - lastTime) / 1000));
+    lastTime = now;
+    if (state === 'playing') update(dt);
+    else mouse.clickQueued = false;
+    render();
+    for (const k in pressed) delete pressed[k];
+    requestAnimationFrame(frame);
+  }
+
+  showMenu();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
