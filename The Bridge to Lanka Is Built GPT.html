@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Bridge to Lanka Is Built</title>
+
+<style>
+  :root {
+    --gold: #ffd166;
+    --deep-blue: #12304a;
+    --panel: rgba(8, 28, 43, 0.94);
+    --cream: #fff4d6;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--cream);
+    background: #091b2b;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+  }
+
+  header {
+    padding: 18px 12px;
+    text-align: center;
+    background: linear-gradient(120deg, #10283c, #174c68);
+    border-bottom: 2px solid #e9b65b;
+  }
+
+  header h1 {
+    margin: 0;
+    color: var(--gold);
+    font-size: clamp(20px, 4vw, 32px);
+    letter-spacing: 1px;
+  }
+
+  header p {
+    margin: 7px 0 0;
+    color: #d8e9f1;
+    font-size: 14px;
+  }
+
+  main {
+    width: min(1100px, 100%);
+    margin: 0 auto;
+    padding: 14px;
+  }
+
+  .game-panel {
+    overflow: hidden;
+    background: var(--panel);
+    border: 1px solid #45677b;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .hud {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+    background: #102b40;
+  }
+
+  .stat {
+    padding: 9px 5px;
+    text-align: center;
+    background: #1a3b51;
+    border-radius: 8px;
+  }
+
+  .stat small {
+    display: block;
+    color: #a9c9d8;
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+
+  .stat strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--gold);
+    font-size: 16px;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    width: 100%;
+    background: #1d819e;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 5 / 3;
+    touch-action: none;
+  }
+
+  .message {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    text-align: center;
+    color: #fff1c5;
+    background: #17364b;
+    font-size: 14px;
+  }
+
+  .progress-track {
+    height: 8px;
+    background: #294658;
+  }
+
+  .progress-fill {
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #f2a65a, #ffe18a);
+    transition: width 0.2s ease;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .control-group {
+    padding: 12px;
+    background: #102b40;
+    border: 1px solid #31566b;
+    border-radius: 10px;
+  }
+
+  .control-group h3 {
+    margin: 0 0 10px;
+    color: var(--gold);
+    font-size: 14px;
+  }
+
+  .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  button {
+    min-height: 40px;
+    padding: 9px 13px;
+    color: #fff8e7;
+    background: #23516b;
+    border: 1px solid #507c91;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.15s, transform 0.15s;
+  }
+
+  button:hover {
+    background: #34718d;
+  }
+
+  button:active {
+    transform: scale(0.97);
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+  }
+
+  .primary {
+    color: #142638;
+    background: var(--gold);
+    border-color: #ffe5a0;
+  }
+
+  .primary:hover {
+    color: #142638;
+    background: #ffe39a;
+  }
+
+  .instructions {
+    padding: 14px;
+    color: #c9dce7;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  .instructions strong {
+    color: #ffe09a;
+  }
+
+  .footer {
+    padding: 14px;
+    text-align: center;
+    color: #91adbd;
+    font-size: 12px;
+  }
+
+  @media (max-width: 600px) {
+    main {
+      padding: 7px;
+    }
+
+    .hud {
+      gap: 5px;
+      padding: 7px;
+    }
+
+    .stat strong {
+      font-size: 13px;
+    }
+
+    .stat small {
+      font-size: 9px;
+    }
+
+    .controls {
+      grid-template-columns: 1fr;
+      padding: 8px;
+    }
+
+    .message {
+      font-size: 12px;
+    }
+
+    button {
+      padding: 9px 10px;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🌉 The Bridge to Lanka Is Built</h1>
+  <p>A Ramayana-inspired construction and exploration adventure</p>
+</header>
+
+<main>
+  <section class="game-panel">
+
+    <div class="hud">
+      <div class="stat">
+        <small>Construction</small>
+        <strong id="level">Puzzle 1 / 3</strong>
+      </div>
+
+      <div class="stat">
+        <small>Bridge Pieces</small>
+        <strong id="pieces">0 / 9</strong>
+      </div>
+
+      <div class="stat">
+        <small>Stones Remaining</small>
+        <strong id="stones">9</strong>
+      </div>
+
+      <div class="stat">
+        <small>Companion</small>
+        <strong id="companion">Hanuman</strong>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas
+        id="game"
+        width="1000"
+        height="600"
+        aria-label="Interactive bridge-building game"
+      ></canvas>
+    </div>
+
+    <div class="message" id="message" role="status" aria-live="polite">
+      Welcome! Collect stones, build the bridge, and reach Lanka.
+    </div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progress"></div>
+    </div>
+
+    <div class="controls">
+
+      <section class="control-group">
+        <h3>🧭 Movement</h3>
+        <div class="button-row">
+          <button data-move="up">⬆ Up</button>
+          <button data-move="left">⬅ Left</button>
+          <button data-move="down">⬇ Down</button>
+          <button data-move="right">➡ Right</button>
+        </div>
+      </section>
+
+      <section class="control-group">
+        <h3>🪨 Construction & Companions</h3>
+        <div class="button-row">
+          <button id="interact" class="primary">E · Interact</button>
+          <button id="strength">H · Hanuman's Strength</button>
+          <button id="command">C · Companion</button>
+          <button id="restart">↻ Restart</button>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="instructions">
+      <strong>How to play</strong><br>
+      1. Move to the stone collection area on the left side of the coastline.<br>
+      2. Press <strong>E</strong> to collect one stone.<br>
+      3. Carry the stone to an empty, glowing bridge position and press
+      <strong>E</strong> again to place it.<br>
+      4. Complete each group of three bridge pieces to unlock the next section.<br>
+      5. Press <strong>C</strong> to change your companion and
+      <strong>H</strong> to activate Hanuman's strength.<br>
+      6. Finish all three construction puzzles and cross the completed bridge
+      to reach Lanka.<br><br>
+      <strong>Keyboard:</strong> Arrow keys or WASD to move, E to interact,
+      H for strength, C for companions.
+    </div>
+
+  </section>
+
+  <div class="footer">
+    A standalone HTML5 Canvas prototype · No external assets or libraries
+  </div>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  // =========================================================
+  // 1. CANVAS AND GAME CONSTANTS
+  // =========================================================
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    document.getElementById("message").textContent =
+      "Your browser does not support HTML5 Canvas.";
+    return;
+  }
+
+  const W = 1000;
+  const H = 600;
+
+  const BRIDGE_Y = 320;
+  const BRIDGE_START = 300;
+  const BRIDGE_END = 950;
+
+  const STONE_CAPACITY = 1;
+
+  const PUZZLES = [
+    {
+      name: "Coastal Foundation",
+      positions: [370, 420, 470],
+      description: "Build the coastal foundation."
+    },
+    {
+      name: "Ocean Crossing",
+      positions: [570, 620, 670],
+      description: "Extend the bridge across the ocean."
+    },
+    {
+      name: "Lanka Approach",
+      positions: [770, 820, 870],
+      description: "Complete the final approach to Lanka."
+    }
+  ];
+
+  const CHARACTERS = [
+    "Rama",
+    "Lakshmana",
+    "Hanuman",
+    "Sugriva"
+  ];
+
+  const $ = (id) => document.getElementById(id);
+
+  const ui = {
+    level: $("level"),
+    pieces: $("pieces"),
+    stones: $("stones"),
+    companion: $("companion"),
+    message: $("message"),
+    progress: $("progress")
+  };
+
+  // =========================================================
+  // 2. GAME STATE
+  // =========================================================
+
+  let player;
+  let resources;
+  let placedPieces;
+  let puzzleIndex;
+  let companionIndex;
+  let carried;
+  let strengthActive;
+  let victory;
+  let gameOver;
+  let elapsed;
+  let lastTime;
+  let keys;
+  let moveButtons;
+  let messageTimer;
+  let animationFrame;
+
+  function resetGame() {
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame);
+    }
+
+    player = {
+      x: 105,
+      y: 420,
+      speed: 190,
+      facing: 1,
+      step: 0
+    };
+
+    resources = 9;
+    placedPieces = [];
+    puzzleIndex = 0;
+    companionIndex = 2;
+    carried = 0;
+    strengthActive = false;
+    victory = false;
+    gameOver = false;
+    elapsed = 0;
+    lastTime = 0;
+
+    keys = Object.create(null);
+    moveButtons = Object.create(null);
+
+    clearTimeout(messageTimer);
+
+    updateHUD();
+    showMessage(
+      "Begin your journey! Find stones at the coastal camp."
+    );
+
+    animationFrame = requestAnimationFrame(loop);
+  }
+
+  function showMessage(text, duration = 0) {
+    ui.message.textContent = text;
+
+    clearTimeout(messageTimer);
+
+    if (duration > 0) {
+      messageTimer = setTimeout(() => {
+        ui.message.textContent = defaultMessage();
+      }, duration);
+    }
+  }
+
+  function defaultMessage() {
+    if (victory) {
+      return "Victory! The bridge is complete and Lanka has been reached.";
+    }
+
+    if (gameOver) {
+      return "The adventure has ended. Restart to play again.";
+    }
+
+    if (carried > 0) {
+      return "You carry a stone. Find an empty glowing bridge position.";
+    }
+
+    if (resources > 0) {
+      return "Collect a stone from the coastal camp, then build the bridge.";
+    }
+
+    return "All stones have been used. Complete the bridge and reach Lanka.";
+  }
+
+  function updateHUD() {
+    const count = placedPieces.length;
+    const total = PUZZLES.reduce(
+      (sum, puzzle) => sum + puzzle.positions.length,
+      0
+    );
+
+    const current = Math.min(puzzleIndex, PUZZLES.length - 1);
+
+    ui.level.textContent = victory
+      ? "Completed!"
+      : `Puzzle ${current + 1} / ${PUZZLES.length}`;
+
+    ui.pieces.textContent = `${count} / ${total}`;
+    ui.stones.textContent = String(resources);
+    ui.companion.textContent = CHARACTERS[companionIndex];
+
+    ui.progress.style.width = `${(count / total) * 100}%`;
+  }
+
+  // =========================================================
+  // 3. GRID AND PLACEMENT LOGIC
+  // =========================================================
+
+  function getAllSlots() {
+    const slots = [];
+
+    PUZZLES.forEach((puzzle, puzzleNumber) => {
+      puzzle.positions.forEach((x, slotNumber) => {
+        slots.push({
+          x,
+          y: BRIDGE_Y,
+          puzzleNumber,
+          slotNumber
+        });
+      });
+    });
+
+    return slots;
+  }
+
+  function getPlacedSlotCount() {
+    return placedPieces.length;
+  }
+
+  function isSlotPlaced(slot) {
+    return placedPieces.some(
+      piece =>
+        piece.puzzleNumber === slot.puzzleNumber &&
+        piece.slotNumber === slot.slotNumber
+    );
+  }
+
+  function currentPuzzleComplete() {
+    if (puzzleIndex >= PUZZLES.length) {
+      return true;
+    }
+
+    const puzzle = PUZZLES[puzzleIndex];
+
+    return puzzle.positions.every((_, slotNumber) =>
+      placedPieces.some(
+        piece =>
+          piece.puzzleNumber === puzzleIndex &&
+          piece.slotNumber === slotNumber
+      )
+    );
+  }
+
+  function distance(x1, y1, x2, y2) {
+    return Math.hypot(x1 - x2, y1 - y2);
+  }
+
+  function nearestSlot(maxDistance) {
+    const slots = getAllSlots();
+    let best = null;
+    let bestDistance = Infinity;
+
+    for (const slot of slots) {
+      if (slot.puzzleNumber !== puzzleIndex) {
+        continue;
+      }
+
+      if (isSlotPlaced(slot)) {
+        continue;
+      }
+
+      const d = distance(player.x, player.y, slot.x, slot.y);
+
+      if (d < bestDistance && d <= maxDistance) {
+        best = slot;
+        bestDistance = d;
+      }
+    }
+
+    return best;
+  }
+
+  function interact() {
+    if (victory || gameOver) {
+      return;
+    }
+
+    // Collect stones at the coastal camp.
+    const nearCamp =
+      distance(player.x, player.y, 145, 425) < 85;
+
+    if (nearCamp && carried === 0 && resources > 0) {
+      carried = STONE_CAPACITY;
+      resources--;
+
+      showMessage(
+        "Stone collected! Carry it to an empty bridge position."
+      );
+
+      updateHUD();
+      return;
+    }
+
+    // Place a stone on the current puzzle's grid.
+    const slot = nearestSlot(57);
+
+    if (carried > 0 && slot) {
+      if (slot.puzzleNumber !== puzzleIndex) {
+        showMessage("Complete the current construction puzzle first.");
+        return;
+      }
+
+      const snappedX = Math.round(slot.x / 50) * 50;
+
+      placedPieces.push({
+        x: snappedX,
+        y: BRIDGE_Y,
+        puzzleNumber: slot.puzzleNumber,
+        slotNumber: slot.slotNumber,
+        placedAt: elapsed
+      });
+
+      carried = 0;
+
+      showMessage("Stone placed! The bridge grows stronger.");
+
+      if (currentPuzzleComplete()) {
+        completePuzzle();
+      }
+
+      updateHUD();
+      return;
+    }
+
+    if (carried === 0 && nearCamp && resources === 0) {
+      showMessage("No stones remain in the collection area.");
+      return;
+    }
+
+    if (carried === 0) {
+      showMessage(
+        "You need a stone first. Visit the coastal camp on the left."
+      );
+      return;
+    }
+
+    showMessage(
+      "Move closer to an empty glowing bridge position to place the stone."
+    );
+  }
+
+  function completePuzzle() {
+    const completedNumber = puzzleIndex + 1;
+
+    showMessage(
+      `Puzzle ${completedNumber} complete! ${PUZZLES[puzzleIndex].name} finished.`,
+      2500
+    );
+
+    puzzleIndex++;
+
+    if (puzzleIndex >= PUZZLES.length) {
+      showMessage(
+        "The bridge is complete! Walk across it to reach Lanka."
+      );
+    }
+  }
+
+  // =========================================================
+  // 4. COMPANION POWERS
+  // =========================================================
+
+  function cycleCompanion() {
+    if (victory || gameOver) {
+      return;
+    }
+
+    companionIndex = (companionIndex + 1) % CHARACTERS.length;
+
+    const name = CHARACTERS[companionIndex];
+
+    strengthActive = name === "Hanuman";
+
+    if (name === "Hanuman") {
+      showMessage(
+        "Hanuman joins the construction team! Strength is available."
+      );
+    } else if (name === "Rama") {
+      showMessage("Rama leads the expedition.");
+    } else if (name === "Lakshmana") {
+      showMessage("Lakshmana stands ready to assist.");
+    } else {
+      showMessage("Sugriva coordinates the vanara workers.");
+    }
+
+    updateHUD();
+  }
+
+  function activateStrength() {
+    if (victory || gameOver) {
+      return;
+    }
+
+    if (CHARACTERS[companionIndex] !== "Hanuman") {
+      showMessage(
+        "Select Hanuman with C before using his strength."
+      );
+      return;
+    }
+
+    strengthActive = true;
+
+    const slot = nearestSlot(95);
+
+    if (carried > 0 && slot) {
+      // Hanuman can move a carried stone into a nearby grid slot.
+      placedPieces.push({
+        x: Math.round(slot.x / 50) * 50,
+        y: BRIDGE_Y,
+        puzzleNumber: slot.puzzleNumber,
+        slotNumber: slot.slotNumber,
+        placedAt: elapsed
+      });
+
+      carried = 0;
+
+      showMessage(
+        "Hanuman lifts and places the stone with extraordinary strength!"
+      );
+
+      if (currentPuzzleComplete()) {
+        completePuzzle();
+      }
+
+      updateHUD();
+      return;
+    }
+
+    showMessage(
+      "Hanuman's strength is active. Move closer to a bridge slot while carrying a stone."
+    );
+  }
+
+  // =========================================================
+  // 5. PLAYER MOVEMENT AND COLLISION
+  // =========================================================
+
+  function canMoveTo(x, y) {
+    const r = 14;
+
+    // Keep the character inside the visible world.
+    if (x < r || x > W - r || y < r || y > H - r) {
+      return false;
+    }
+
+    // Water occupies the central area. The player must remain
+    // on the bridge corridor when moving through the ocean.
+    const overOcean =
+      x > BRIDGE_START - 20 &&
+      x < BRIDGE_END + 15 &&
+      y > 205 &&
+      y < 485;
+
+    if (overOcean) {
+      const onBridgePath =
+        Math.abs(y - BRIDGE_Y) < 44;
+
+      if (!onBridgePath) {
+        return false;
+      }
+
+      // Each section opens only after the previous section is built.
+      if (x > 500 && puzzleIndex < 1) {
+        return false;
+      }
+
+      if (x > 700 && puzzleIndex < 2) {
+        return false;
+      }
+
+      if (x > 925 && puzzleIndex < 3) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function movePlayer(dx, dy, dt) {
+    if (victory || gameOver) {
+      return;
+    }
+
+    const length = Math.hypot(dx, dy);
+
+    if (length === 0) {
+      return;
+    }
+
+    dx /= length;
+    dy /= length;
+
+    const speed = player.speed * dt;
+
+    const nextX = player.x + dx * speed;
+    const nextY = player.y + dy * speed;
+
+    // Separate axis checks allow sliding along obstacles.
+    if (canMoveTo(nextX, player.y)) {
+      player.x = nextX;
+    }
+
+    if (canMoveTo(player.x, nextY)) {
+      player.y = nextY;
+    }
+
+    if (dx !== 0) {
+      player.facing = dx > 0 ? 1 : -1;
+    }
+
+    player.step += dt * length * 8;
+
+    // Victory is possible only after all bridge pieces are placed.
+    if (
+      puzzleIndex >= PUZZLES.length &&
+      player.x >= 940 &&
+      Math.abs(player.y - BRIDGE_Y) < 55
+    ) {
+      winGame();
+    }
+  }
+
+  function winGame() {
+    if (victory) {
+      return;
+    }
+
+    victory = true;
+    strengthActive = false;
+
+    updateHUD();
+
+    showMessage(
+      "Victory! Rama and his companions have reached Lanka. The bridge is complete!"
+    );
+  }
+
+  // =========================================================
+  // 6. BACKGROUND AND ENVIRONMENT DRAWING
+  // =========================================================
+
+  function drawBackground() {
+    // Sky.
+    const sky = ctx.createLinearGradient(0, 0, 0, 250);
+
+    sky.addColorStop(0, "#7bd0e7");
+    sky.addColorStop(1, "#e6dfb4");
+
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Sun.
+    ctx.fillStyle = "rgba(255, 231, 157, 0.9)";
+    ctx.beginPath();
+    ctx.arc(805, 85, 36, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255, 241, 187, 0.18)";
+    ctx.beginPath();
+    ctx.arc(805, 85, 54, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Distant clouds.
+    drawCloud(160, 85, 0.8);
+    drawCloud(470, 105, 0.65);
+    drawCloud(680, 55, 0.55);
+
+    // Ocean.
+    const sea = ctx.createLinearGradient(0, 190, 0, 500);
+
+    sea.addColorStop(0, "#268eae");
+    sea.addColorStop(0.6, "#126b91");
+    sea.addColorStop(1, "#0b496d");
+
+    ctx.fillStyle = sea;
+    ctx.fillRect(0, 190, W, 310);
+
+    drawWaves();
+
+    // Coastal land.
+    ctx.fillStyle = "#d9c18b";
+    ctx.beginPath();
+    ctx.moveTo(0, 210);
+    ctx.lineTo(175, 215);
+    ctx.lineTo(260, 240);
+    ctx.lineTo(325, 286);
+    ctx.lineTo(325, 375);
+    ctx.lineTo(270, 430);
+    ctx.lineTo(210, 475);
+    ctx.lineTo(0, 490);
+    ctx.closePath();
+    ctx.fill();
+
+    // Sandy shore highlight.
+    ctx.strokeStyle = "#f4dfad";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 224);
+    ctx.lineTo(170, 228);
+    ctx.lineTo(250, 252);
+    ctx.lineTo(315, 292);
+    ctx.stroke();
+
+    // Rocks and cliffs.
+    drawRock(40, 245, 1.2);
+    drawRock(105, 265, 0.8);
+    drawRock(235, 250, 1.0);
+    drawRock(260, 420, 1.1);
+    drawRock(175, 450, 0.75);
+
+    // Coast vegetation.
+    drawPalm(55, 360, 0.9);
+    drawPalm(220, 385, 0.65);
+
+    // Lanka.
+    drawLanka();
+
+    // Camp.
+    drawCamp();
+
+    // Bridge.
+    drawBridge();
+
+    // Destination label.
+    ctx.fillStyle = "rgba(5, 25, 42, 0.65)";
+    roundedRect(770, 145, 178, 32, 8);
+    ctx.fill();
+
+    ctx.fillStyle = "#fff0c3";
+    ctx.font = "bold 14px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("LANKA APPROACH", 859, 166);
+    ctx.textAlign = "left";
+  }
+
+  function drawCloud(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.arc(20, -8, 24, 0, Math.PI * 2);
+    ctx.arc(43, 0, 17, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawWaves() {
+    ctx.save();
+
+    for (let row = 0; row < 8; row++) {
+      const y = 215 + row * 34;
+
+      ctx.beginPath();
+
+      for (let x = 0; x <= W; x += 8) {
+        const waveY =
+          y +
+          Math.sin(x * 0.025 + elapsed * 1.6 + row) * 4 +
+          Math.sin(x * 0.012 - elapsed * 0.8) * 2;
+
+        if (x === 0) {
+          ctx.moveTo(x, waveY);
+        } else {
+          ctx.lineTo(x, waveY);
+        }
+      }
+
+      ctx.strokeStyle =
+        row % 2 === 0
+          ? "rgba(190,239,244,0.35)"
+          : "rgba(91,202,221,0.35)";
+
+      ctx.lineWidth = row % 2 === 0 ? 2 : 1;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawRock(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = "#786f61";
+
+    ctx.beginPath();
+    ctx.moveTo(-28, 12);
+    ctx.lineTo(-22, -12);
+    ctx.lineTo(-5, -25);
+    ctx.lineTo(15, -18);
+    ctx.lineTo(30, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#a59b84";
+
+    ctx.beginPath();
+    ctx.moveTo(-22, -10);
+    ctx.lineTo(-5, -25);
+    ctx.lineTo(5, -9);
+    ctx.lineTo(-7, -3);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawPalm(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    ctx.strokeStyle = "#765036";
+    ctx.lineWidth = 8;
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-7, -30, 4, -62);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#34744a";
+    ctx.lineWidth = 5;
+
+    for (let i = 0; i < 6; i++) {
+      const angle = -Math.PI + i * Math.PI / 5;
+
+      ctx.beginPath();
+      ctx.moveTo(4, -62);
+      ctx.quadraticCurveTo(
+        4 + Math.cos(angle) * 22,
+        -62 + Math.sin(angle) * 13,
+        4 + Math.cos(angle) * 42,
+        -62 + Math.sin(angle) * 24
+      );
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawCamp() {
+    // Tent.
+    ctx.fillStyle = "#b87b45";
+    ctx.beginPath();
+    ctx.moveTo(38, 360);
+    ctx.lineTo(82, 315);
+    ctx.lineTo(126, 360);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#ead3a0";
+    ctx.beginPath();
+    ctx.moveTo(82, 315);
+    ctx.lineTo(82, 360);
+    ctx.lineTo(126, 360);
+    ctx.closePath();
+    ctx.fill();
+
+    // Stone pile.
+    const stonePositions = [
+      [125, 416],
+      [145, 410],
+      [164, 418],
+      [133, 432],
+      [153, 433]
+    ];
+
+    stonePositions.forEach(([x, y], i) => {
+      if (i >= resources) {
+        return;
+      }
+
+      ctx.fillStyle = ["#999b96", "#b5b3a8", "#858d91"][i % 3];
+
+      ctx.beginPath();
+      ctx.ellipse(
+        x,
+        y,
+        11,
+        7,
+        -0.15,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    });
+
+    // Camp labels.
+    ctx.fillStyle = "#503a24";
+    ctx.font = "bold 13px system-ui";
+    ctx.fillText("COASTAL CAMP", 25, 294);
+
+    ctx.fillStyle = "#fff0c3";
+    ctx.fillText("Stone collection", 88, 460);
+  }
+
+  function drawLanka() {
+    // Island.
+    ctx.fillStyle = "#9a9a60";
+
+    ctx.beginPath();
+    ctx.moveTo(940, 220);
+    ctx.lineTo(960, 190);
+    ctx.lineTo(990, 185);
+    ctx.lineTo(1000, 205);
+    ctx.lineTo(1000, 430);
+    ctx.lineTo(970, 435);
+    ctx.lineTo(940, 390);
+    ctx.closePath();
+    ctx.fill();
+
+    // Palace walls.
+    ctx.fillStyle = "#d9ad58";
+    ctx.fillRect(951, 228, 49, 75);
+
+    // Towers.
+    ctx.fillStyle = "#f0cc76";
+
+    ctx.fillRect(953, 206, 12, 40);
+    ctx.fillRect(974, 192, 13, 54);
+    ctx.fillRect(991, 210, 9, 36);
+
+    // Tower roofs.
+    ctx.fillStyle = "#a84b35";
+
+    for (const [x, y] of [[953, 206], [974, 192], [991, 210]]) {
+      ctx.beginPath();
+      ctx.moveTo(x - 3, y);
+      ctx.lineTo(x + 6, y - 12);
+      ctx.lineTo(x + 15, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Windows.
+    ctx.fillStyle = "#69452d";
+
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(958 + i * 13, 250, 6, 15);
+    }
+  }
+
+  function roundedRect(x, y, w, h, radius) {
+    const r = Math.min(radius, w / 2, h / 2);
+
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // =========================================================
+  // 7. BRIDGE CONSTRUCTION DRAWING
+  // =========================================================
+
+  function drawBridge() {
+    // Guide rope.
+    ctx.strokeStyle = "#7e6344";
+    ctx.lineWidth = 5;
+
+    ctx.beginPath();
+    ctx.moveTo(305, BRIDGE_Y - 31);
+    ctx.quadraticCurveTo(620, BRIDGE_Y - 58, 935, BRIDGE_Y - 31);
+    ctx.stroke();
+
+    // Bridge deck.
+    ctx.fillStyle = "#a78052";
+    ctx.fillRect(300, BRIDGE_Y - 13, 640, 31);
+
+    // Deck texture.
+    ctx.strokeStyle = "#6d5037";
+    ctx.lineWidth = 2;
+
+    for (let x = 305; x <= 935; x += 25) {
+      ctx.beginPath();
+      ctx.moveTo(x, BRIDGE_Y - 12);
+      ctx.lineTo(x, BRIDGE_Y + 17);
+      ctx.stroke();
+    }
+
+    // Bridge supports.
+    ctx.fillStyle = "#6c777b";
+
+    for (let x = 315; x <= 930; x += 50) {
+      ctx.fillRect(x, BRIDGE_Y + 18, 10, 32);
+    }
+
+    // Construction slots.
+    const slots = getAllSlots();
+
+    slots.forEach(slot => {
+      const placed = isSlotPlaced(slot);
+      const active = slot.puzzleNumber === puzzleIndex && !victory;
+
+      if (placed) {
+        return;
+      }
+
+      if (active) {
+        const pulse = 0.55 + Math.sin(elapsed * 4) * 0.2;
+
+        ctx.fillStyle = `rgba(255, 218, 95, ${pulse})`;
+        roundedRect(slot.x - 19, slot.y - 16, 38, 29, 5);
+        ctx.fill();
+
+        ctx.strokeStyle = "#fff2b1";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = "rgba(9, 30, 43, 0.55)";
+        roundedRect(slot.x - 18, slot.y - 15, 36, 28, 5);
+        ctx.fill();
+      }
+    });
+
+    // Placed bridge stones.
+    placedPieces.forEach(piece => {
+      const age = elapsed - piece.placedAt;
+      const scale = Math.min(1, age * 4);
+
+      ctx.save();
+      ctx.translate(piece.x, piece.y);
+      ctx.scale(1, scale);
+
+      ctx.fillStyle = "#b9b7ad";
+      roundedRect(-20, -15, 40, 29, 5);
+      ctx.fill();
+
+      ctx.fillStyle = "#dedbd0";
+      roundedRect(-17, -13, 34, 8, 3);
+      ctx.fill();
+
+      ctx.strokeStyle = "#777d7b";
+      ctx.lineWidth = 1.5;
+      roundedRect(-20, -15, 40, 29, 5);
+      ctx.stroke();
+
+      ctx.restore();
+    });
+
+    // Bridge flags.
+    drawFlag(330, BRIDGE_Y - 25);
+    drawFlag(620, BRIDGE_Y - 25);
+    drawFlag(905, BRIDGE_Y - 25);
+
+    // Puzzle markers.
+    PUZZLES.forEach((puzzle, i) => {
+      const center = puzzle.positions.reduce((a, b) => a + b, 0) /
+        puzzle.positions.length;
+
+      const complete = i < puzzleIndex;
+
+      ctx.fillStyle = complete ? "#d3f4ae" : "#fff0c0";
+      ctx.font = "bold 12px system-ui";
+      ctx.textAlign = "center";
+
+      ctx.fillText(
+        complete ? `✓ ${i + 1}` : `SECTION ${i + 1}`,
+        center,
+        BRIDGE_Y + 73
+      );
+    });
+
+    ctx.textAlign = "left";
+  }
+
+  function drawFlag(x, y) {
+    ctx.strokeStyle = "#765238";
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y - 48);
+    ctx.stroke();
+
+    const wave = Math.sin(elapsed * 3 + x) * 4;
+
+    ctx.fillStyle = "#e3a343";
+    ctx.beginPath();
+    ctx.moveTo(x, y - 47);
+    ctx.lineTo(x + 23, y - 40 + wave);
+    ctx.lineTo(x, y - 31);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // =========================================================
+  // 8. CHARACTER ANIMATION
+  // =========================================================
+
+  function drawCharacter(x, y, type, scale = 1, facing = 1, phase = 0) {
+    ctx.save();
+
+    ctx.translate(x, y);
+    ctx.scale(scale * facing, scale);
+
+    // Shadow.
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(0, 3, 14, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const palette = {
+      Rama: {
+        skin: "#a96743",
+        clothes: "#318d78",
+        accent: "#efc45c"
+      },
+      Lakshmana: {
+        skin: "#bd7d4c",
+        clothes: "#4779b4",
+        accent: "#f1ce79"
+      },
+      Hanuman: {
+        skin: "#c68a55",
+        clothes: "#b64d35",
+        accent: "#f3c55c"
+      },
+      Sugriva: {
+        skin: "#b67b4d",
+        clothes: "#7c944e",
+        accent: "#efcf75"
+      },
+      Worker: {
+        skin: "#b47a4d",
+        clothes: "#8c6948",
+        accent: "#e2c28c"
+      }
+    };
+
+    const colors = palette[type] || palette.Worker;
+
+    const walk = Math.sin(phase) * 3;
+
+    // Legs.
+    ctx.strokeStyle = "#553d32";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(-5, -10);
+    ctx.lineTo(-6 + walk, -1);
+    ctx.moveTo(5, -10);
+    ctx.lineTo(6 - walk, -1);
+    ctx.stroke();
+
+    // Body.
+    ctx.fillStyle = colors.clothes;
+    roundedRect(-10, -29, 20, 23, 6);
+    ctx.fill();
+
+    // Waistband.
+    ctx.strokeStyle = colors.accent;
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.moveTo(-9, -12);
+    ctx.lineTo(9, -12);
+    ctx.stroke();
+
+    // Arms.
+    ctx.strokeStyle = colors.skin;
+    ctx.lineWidth = 5;
+
+    ctx.beginPath();
+    ctx.moveTo(-8, -24);
+    ctx.lineTo(-13, -14 + walk);
+    ctx.moveTo(8, -24);
+    ctx.lineTo(13, -14 - walk);
+    ctx.stroke();
+
+    // Head.
+    ctx.fillStyle = colors.skin;
+
+    ctx.beginPath();
+    ctx.arc(0, -37, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair.
+    ctx.fillStyle = "#352a27";
+    ctx.beginPath();
+    ctx.arc(0, -41, 10, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    // Crown or headband.
+    ctx.fillStyle = colors.accent;
+    ctx.fillRect(-8, -43, 16, 3);
+
+    // Eye.
+    ctx.fillStyle = "#201b19";
+    ctx.beginPath();
+    ctx.arc(4, -37, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hanuman's tail.
+    if (type === "Hanuman" || type === "Worker" || type === "Sugriva") {
+      ctx.strokeStyle = colors.skin;
+      ctx.lineWidth = 3;
+
+      ctx.beginPath();
+      ctx.moveTo(-8, -14);
+      ctx.quadraticCurveTo(-22, -17, -17, -27);
+      ctx.stroke();
+    }
+
+    // Bow carried by Rama and Lakshmana.
+    if (type === "Rama" || type === "Lakshmana") {
+      ctx.strokeStyle = "#e9c47b";
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.arc(14, -25, 9, -1.2, 1.2);
+      ctx.stroke();
+    }
+
+    // Carried stone.
+    if (type === "PlayerCarrying") {
+      ctx.fillStyle = "#c1c0b6";
+      roundedRect(-7, -53, 14, 10, 3);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function drawPlayer() {
+    const name = CHARACTERS[companionIndex];
+
+    // The player is depicted as the selected expedition leader.
+    drawCharacter(
+      player.x,
+      player.y,
+      name,
+      1.15,
+      player.facing,
+      player.step
+    );
+
+    if (carried > 0) {
+      ctx.fillStyle = "#c5c3b9";
+
+      ctx.beginPath();
+      ctx.ellipse(
+        player.x,
+        player.y - 65,
+        11,
+        8,
+        -0.15,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.strokeStyle = "#7c807e";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Active strength aura.
+    if (strengthActive) {
+      ctx.strokeStyle = `rgba(255, 209, 102, ${
+        0.45 + Math.sin(elapsed * 5) * 0.2
+      })`;
+
+      ctx.lineWidth = 3;
+
+      ctx.beginPath();
+      ctx.arc(
+        player.x,
+        player.y - 25,
+        26 + Math.sin(elapsed * 4) * 3,
+        0,
+        Math.PI * 2
+      );
+      ctx.stroke();
+    }
+
+    // Player name.
+    ctx.font = "bold 12px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#fff6d9";
+
+    ctx.fillText(name, player.x, player.y - 79);
+
+    ctx.textAlign = "left";
+  }
+
+  function drawWorkers() {
+    const workers = [
+      { x: 205, y: 345, phase: 0.5 },
+      { x: 250, y: 350, phase: 1.8 },
+      { x: 530, y: 293, phase: 2.2 },
+      { x: 725, y: 292, phase: 0.8 }
+    ];
+
+    workers.forEach((worker, i) => {
+      const isActiveSection =
+        worker.x > 500 && worker.x < 700
+          ? puzzleIndex >= 1
+          : worker.x > 700
+            ? puzzleIndex >= 2
+            : true;
+
+      if (!isActiveSection) {
+        return;
+      }
+
+      const bob = Math.sin(elapsed * 2 + worker.phase) * 2;
+
+      drawCharacter(
+        worker.x,
+        worker.y + bob,
+        i === 0 ? "Sugriva" : "Worker",
+        0.8,
+        1,
+        elapsed * 4 + worker.phase
+      );
+    });
+  }
+
+  // =========================================================
+  // 9. LABELS AND IN-GAME PROMPTS
+  // =========================================================
+
+  function drawWorldLabels() {
+    ctx.font = "bold 13px system-ui";
+    ctx.textAlign = "center";
+
+    ctx.fillStyle = "rgba(5, 31, 48, 0.72)";
+    roundedRect(340, 215, 320, 32, 8);
+    ctx.fill();
+
+    ctx.fillStyle = "#fff0bd";
+
+    if (puzzleIndex < PUZZLES.length) {
+      ctx.fillText(
+        PUZZLES[puzzleIndex].name.toUpperCase(),
+        500,
+        235
+      );
+    } else {
+      ctx.fillText("THE BRIDGE TO LANKA IS COMPLETE", 500, 235);
+    }
+
+    // Camp interaction indicator.
+    if (
+      carried === 0 &&
+      resources > 0 &&
+      distance(player.x, player.y, 145, 425) < 90
+    ) {
+      drawPrompt(145, 385, "E · Collect stone");
+    }
+
+    // Placement indicator.
+    const slot = nearestSlot(60);
+
+    if (carried > 0 && slot) {
+      drawPrompt(slot.x, slot.y - 45, "E · Place stone");
+    }
+
+    if (victory) {
+      drawVictory();
+    }
+
+    ctx.textAlign = "left";
+  }
+
+  function drawPrompt(x, y, text) {
+    ctx.font = "bold 12px system-ui";
+
+    const width = ctx.measureText(text).width + 20;
+
+    ctx.fillStyle = "rgba(7, 27, 42, 0.88)";
+    roundedRect(x - width / 2, y - 15, width, 26, 6);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffe29b";
+    ctx.textAlign = "center";
+    ctx.fillText(text, x, y + 2);
+    ctx.textAlign = "left";
+  }
+
+  function drawVictory() {
+    ctx.fillStyle = "rgba(4, 20, 34, 0.78)";
+    roundedRect(220, 170, 560, 220, 18);
+    ctx.fill();
+
+    ctx.strokeStyle = "#ffd166";
+    ctx.lineWidth = 3;
+    roundedRect(220, 170, 560, 220, 18);
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+
+    ctx.fillStyle = "#ffd166";
+    ctx.font = "bold 34px system-ui";
+    ctx.fillText("VICTORY!", 500, 225);
+
+    ctx.fillStyle = "#fff5d9";
+    ctx.font = "bold 20px system-ui";
+    ctx.fillText("The Bridge to Lanka Is Built", 500, 264);
+
+    ctx.font = "15px system-ui";
+    ctx.fillText(
+      "Rama and his companions have completed their journey.",
+      500,
+      300
+    );
+
+    ctx.fillText(
+      `Bridge pieces placed: ${placedPieces.length} / 9`,
+      500,
+      332
+    );
+
+    ctx.fillStyle = "#f5d18a";
+    ctx.font = "14px system-ui";
+    ctx.fillText(
+      "Press Restart to play again.",
+      500,
+      359
+    );
+
+    ctx.textAlign = "left";
+  }
+
+  // =========================================================
+  // 10. INPUT HANDLING
+  // =========================================================
+
+  const movementKeys = {
+    ArrowUp: "up",
+    KeyW: "up",
+    ArrowDown: "down",
+    KeyS: "down",
+    ArrowLeft: "left",
+    KeyA: "left",
+    ArrowRight: "right",
+    KeyD: "right"
+  };
+
+  window.addEventListener("keydown", event => {
+    if (
+      movementKeys[event.code] ||
+      ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
+        event.code
+      )
+    ) {
+      event.preventDefault();
+    }
+
+    if (event.repeat) {
+      return;
+    }
+
+    if (movementKeys[event.code]) {
+      keys[movementKeys[event.code]] = true;
+      return;
+    }
+
+    switch (event.code) {
+      case "KeyE":
+        interact();
+        break;
+
+      case "KeyH":
+        activateStrength();
+        break;
+
+      case "KeyC":
+        cycleCompanion();
+        break;
+
+      case "KeyR":
+        resetGame();
+        break;
+    }
+  });
+
+  window.addEventListener("keyup", event => {
+    const direction = movementKeys[event.code];
+
+    if (direction) {
+      keys[direction] = false;
+    }
+  });
+
+  window.addEventListener("blur", () => {
+    keys = Object.create(null);
+    moveButtons = Object.create(null);
+  });
+
+  // Hold-to-move controls for touchscreens.
+  document.querySelectorAll("[data-move]").forEach(button => {
+    const direction = button.dataset.move;
+
+    button.addEventListener("pointerdown", event => {
+      event.preventDefault();
+
+      moveButtons[direction] = true;
+
+      if (button.setPointerCapture) {
+        try {
+          button.setPointerCapture(event.pointerId);
+        } catch (_) {
+          // Pointer capture is optional.
+        }
+      }
+    });
+
+    const stopMoving = () => {
+      moveButtons[direction] = false;
+    };
+
+    button.addEventListener("pointerup", stopMoving);
+    button.addEventListener("pointercancel", stopMoving);
+    button.addEventListener("lostpointercapture", stopMoving);
+  });
+
+  $("interact").addEventListener("click", interact);
+  $("strength").addEventListener("click", activateStrength);
+  $("command").addEventListener("click", cycleCompanion);
+  $("restart").addEventListener("click", resetGame);
+
+  // =========================================================
+  // 11. MAIN GAME LOOP
+  // =========================================================
+
+  function loop(timestamp) {
+    const dt = lastTime === 0
+      ? 0
+      : Math.min((timestamp - lastTime) / 1000, 0.04);
+
+    lastTime = timestamp;
+
+    if (!victory && !gameOver) {
+      elapsed += dt;
+
+      let dx = 0;
+      let dy = 0;
+
+      if (keys.left || moveButtons.left) dx--;
+      if (keys.right || moveButtons.right) dx++;
+      if (keys.up || moveButtons.up) dy--;
+      if (keys.down || moveButtons.down) dy++;
+
+      movePlayer(dx, dy, dt);
+    }
+
+    render();
+
+    animationFrame = requestAnimationFrame(loop);
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+
+    drawBackground();
+    drawWorkers();
+    drawPlayer();
+    drawWorldLabels();
+  }
+
+  // =========================================================
+  // 12. START THE GAME
+  // =========================================================
+
+  resetGame();
+
+})();
+</script>
+
+</body>
+</html>
+
