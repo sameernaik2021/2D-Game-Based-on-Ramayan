@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#102a43">
+
+<title>Hanuman Travels to Lanka</title>
+
+<style>
+:root {
+  --gold: #ffd166;
+  --dark: #102a43;
+  --panel: rgba(8, 24, 42, 0.88);
+  --text: #fff8e7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #071827;
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 12px;
+}
+
+.game-shell {
+  width: min(1100px, 100%);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+h1 {
+  margin: 0;
+  color: var(--gold);
+  font-size: clamp(20px, 4vw, 30px);
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: #c8deef;
+  font-size: 13px;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.stat {
+  padding: 8px 11px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.stat strong {
+  color: var(--gold);
+}
+
+.game-frame {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(255, 209, 102, .65);
+  border-radius: 14px;
+  background: #6bc8ed;
+  box-shadow: 0 16px 50px rgba(0,0,0,.4);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  touch-action: none;
+}
+
+.hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.hud-box {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(7, 24, 39, .72);
+  backdrop-filter: blur(4px);
+}
+
+.progress-track {
+  width: 150px;
+  height: 7px;
+  margin-top: 5px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #41556a;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--gold);
+  transition: width .1s linear;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(5, 20, 35, .64);
+  backdrop-filter: blur(4px);
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.dialog {
+  width: min(440px, 100%);
+  padding: 24px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid rgba(255, 209, 102, .55);
+  border-radius: 16px;
+  box-shadow: 0 12px 35px rgba(0,0,0,.35);
+}
+
+.dialog h2 {
+  margin: 0 0 10px;
+  color: var(--gold);
+  font-size: clamp(22px, 5vw, 32px);
+}
+
+.dialog p {
+  line-height: 1.6;
+  color: #e0edf7;
+  font-size: 14px;
+}
+
+button {
+  color: #142333;
+  background: var(--gold);
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 17px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:hover {
+  filter: brightness(1.08);
+}
+
+button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+.secondary {
+  color: white;
+  background: #31506a;
+}
+
+.controls-info {
+  margin-top: 12px;
+  padding: 12px 15px;
+  color: #d8e9f5;
+  background: var(--panel);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.controls-info strong {
+  color: var(--gold);
+}
+
+.mobile-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.control-group {
+  display: flex;
+  gap: 10px;
+}
+
+.mobile-controls button {
+  min-width: 62px;
+  min-height: 48px;
+  font-size: 17px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#jumpBtn {
+  min-width: 105px;
+  background: #ffb45e;
+}
+
+.footer {
+  margin: 12px 0;
+  color: #9db6c9;
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (min-width: 800px) {
+  .mobile-controls {
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  body {
+    padding: 7px;
+  }
+
+  .hud {
+    font-size: 10px;
+  }
+
+  .progress-track {
+    width: 90px;
+  }
+
+  .dialog {
+    padding: 15px;
+  }
+
+  .dialog p {
+    font-size: 12px;
+  }
+
+  .controls-info {
+    font-size: 12px;
+  }
+}
+</style>
+</head>
+
+<body>
+<main class="game-shell">
+
+  <header class="header">
+    <div>
+      <h1>Hanuman Travels to Lanka 🌊</h1>
+      <div class="subtitle">
+        An epic journey across the ocean
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">Distance: <strong id="distance">0%</strong></div>
+      <div class="stat">Speed: <strong id="speed">0</strong></div>
+      <div class="stat">Status: <strong id="status">Ready</strong></div>
+    </div>
+  </header>
+
+  <section class="game-frame" aria-label="Hanuman platform game">
+
+    <canvas id="game" width="960" height="540"
+            aria-label="Game world. Use arrow keys and Space to play.">
+    </canvas>
+
+    <div class="hud">
+      <div class="hud-box">
+        <strong id="stage">Mountain Launch</strong>
+        <div style="margin-top:4px">Reach the golden shores of Lanka</div>
+      </div>
+
+      <div class="hud-box">
+        <div>Journey</div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="startOverlay">
+      <div class="dialog">
+        <h2>Jai Hanuman! 🙏</h2>
+        <p>
+          Build momentum on the mountain, leap into the sky,
+          cross the floating rocks, and reach the golden island
+          of Lanka.
+        </p>
+        <p>
+          <strong>Move:</strong> ← → or A / D<br>
+          <strong>Jump:</strong> Space or ↑<br>
+          <strong>Restart:</strong> R
+        </p>
+        <button id="startBtn">Start Adventure</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="winOverlay">
+      <div class="dialog">
+        <h2>Jai Shri Ram! 🏆</h2>
+        <p>
+          Hanuman has crossed the ocean and reached Lanka!
+        </p>
+        <p>
+          <strong>Lanka Exploration Unlocked</strong><br>
+          The next adventure awaits.
+        </p>
+        <button id="exploreBtn">Explore Lanka</button>
+        <button id="replayBtn" class="secondary">Play Again</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="exploreOverlay">
+      <div class="dialog">
+        <h2>Welcome to Lanka 🏝️</h2>
+        <p>
+          The ocean crossing is complete. Explore the golden
+          shores and prepare for the next chapter of the journey.
+        </p>
+        <button id="backBtn">Return to Landing</button>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="mobile-controls">
+    <div class="control-group">
+      <button id="leftBtn" aria-label="Move left">◀</button>
+      <button id="rightBtn" aria-label="Move right">▶</button>
+    </div>
+
+    <button id="jumpBtn" aria-label="Jump">JUMP ⬆</button>
+  </div>
+
+  <div class="controls-info">
+    <strong>How to play:</strong>
+    Hold right to build momentum. Press Space to leap.
+    Steer in midair and use the floating rocks as stepping stones.
+    Land safely on Lanka to unlock the next level.
+    <br>
+    <strong>Tip:</strong> A running leap travels farther than a
+    stationary jump.
+  </div>
+
+  <div class="footer">
+    HTML5 Canvas · JavaScript Physics · No external libraries
+  </div>
+
+</main>
+
+<script>
+"use strict";
+
+/* =========================================================
+   HANUMAN TRAVELS TO LANKA
+   Single-file, dependency-free 2D platformer.
+
+   Coordinate system:
+   - x increases toward Lanka.
+   - y increases downward.
+   - Character position represents the center of the feet.
+   - All game physics use world coordinates.
+   ========================================================= */
+
+(() => {
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    document.querySelector(".game-frame").textContent =
+      "Your browser does not support HTML5 Canvas.";
+    return;
+  }
+
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const WORLD_END = 4380;
+  const LANKA_START = 4080;
+  const GRAVITY = 1250;
+  const MAX_FRAME_TIME = 1 / 30;
+
+  const $ = id => document.getElementById(id);
+
+  const ui = {
+    distance: $("distance"),
+    speed: $("speed"),
+    status: $("status"),
+    stage: $("stage"),
+    progress: $("progress"),
+    startOverlay: $("startOverlay"),
+    winOverlay: $("winOverlay"),
+    exploreOverlay: $("exploreOverlay")
+  };
+
+  let gameState = "ready";
+  let lastTime = 0;
+  let elapsed = 0;
+  let cameraX = 0;
+  let audioContext = null;
+  let windOscillator = null;
+  let windGain = null;
+  let audioEnabled = false;
+
+  const input = {
+    left: false,
+    right: false,
+    jumpPressed: false
+  };
+
+  const particles = [];
+  const clouds = [];
+
+  /* ------------------ WORLD GEOMETRY ------------------ */
+
+  // Each platform is an axis-aligned rectangle.
+  // Top surfaces are the walkable collision surfaces.
+
+  const platforms = [
+    // Mountain launch area
+    { x: 0,    y: 420, w: 390, h: 160, type: "mountain" },
+
+    // Floating-rock traversal
+    { x: 500,  y: 390, w: 125, h: 28, type: "rock" },
+    { x: 720,  y: 330, w: 115, h: 26, type: "rock" },
+    { x: 940,  y: 365, w: 140, h: 28, type: "rock" },
+    { x: 1190, y: 295, w: 120, h: 25, type: "rock" },
+    { x: 1430, y: 350, w: 135, h: 27, type: "rock" },
+    { x: 1670, y: 285, w: 120, h: 25, type: "rock" },
+
+    // Cloud passage and island rocks
+    { x: 1910, y: 335, w: 135, h: 27, type: "rock" },
+    { x: 2170, y: 275, w: 130, h: 25, type: "rock" },
+    { x: 2420, y: 325, w: 135, h: 28, type: "rock" },
+    { x: 2670, y: 260, w: 125, h: 25, type: "rock" },
+    { x: 2920, y: 310, w: 140, h: 28, type: "rock" },
+    { x: 3190, y: 250, w: 130, h: 26, type: "rock" },
+    { x: 3440, y: 305, w: 140, h: 27, type: "rock" },
+    { x: 3690, y: 265, w: 140, h: 26, type: "rock" },
+
+    // Lanka landing area
+    { x: LANKA_START, y: 420, w: WORLD_END - LANKA_START + 200,
+      h: 180, type: "lanka" }
+  ];
+
+  /* ------------------ GAME CHARACTER ------------------ */
+
+  const hero = {
+    x: 95,
+    y: 420,
+    vx: 0,
+    vy: 0,
+
+    width: 34,
+    height: 54,
+
+    grounded: true,
+    facing: 1,
+
+    coyoteTime: 0,
+    jumpBuffer: 0,
+    jumpHold: 0,
+
+    rotation: 0,
+    tailPhase: 0,
+    launchPose: 0,
+    landingImpact: 0,
+
+    previousX: 95,
+    previousY: 420
+  };
+
+  function resetGame() {
+    hero.x = 95;
+    hero.y = 420;
+    hero.vx = 0;
+    hero.vy = 0;
+
+    hero.grounded = true;
+    hero.facing = 1;
+    hero.coyoteTime = 0;
+    hero.jumpBuffer = 0;
+    hero.jumpHold = 0;
+    hero.rotation = 0;
+    hero.tailPhase = 0;
+    hero.launchPose = 0;
+    hero.landingImpact = 0;
+    hero.previousX = hero.x;
+    hero.previousY = hero.y;
+
+    cameraX = 0;
+    elapsed = 0;
+    particles.length = 0;
+
+    input.left = false;
+    input.right = false;
+    input.jumpPressed = false;
+
+    ui.winOverlay.classList.add("hidden");
+    ui.exploreOverlay.classList.add("hidden");
+    ui.startOverlay.classList.add("hidden");
+
+    gameState = "playing";
+    lastTime = performance.now();
+
+    updateUI();
+  }
+
+  /* ------------------ AUDIO ------------------ */
+
+  function initAudio() {
+    if (audioContext) {
+      if (audioContext.state === "suspended") {
+        audioContext.resume().catch(() => {});
+      }
+      return;
+    }
+
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) return;
+
+    try {
+      audioContext = new AudioContextClass();
+
+      windOscillator = audioContext.createOscillator();
+      windGain = audioContext.createGain();
+
+      windOscillator.type = "sine";
+      windOscillator.frequency.value = 95;
+
+      windGain.gain.value = 0;
+
+      windOscillator.connect(windGain);
+      windGain.connect(audioContext.destination);
+
+      windOscillator.start();
+      audioEnabled = true;
+
+    } catch (error) {
+      audioContext = null;
+      audioEnabled = false;
+    }
+  }
+
+  function playTone(frequency, duration, volume, type = "sine") {
+    if (!audioContext || !audioEnabled) return;
+
+    try {
+      const now = audioContext.currentTime;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, now);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        Math.max(30, frequency * 0.55),
+        now + duration
+      );
+
+      gain.gain.setValueAtTime(Math.max(0.0001, volume), now);
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + duration
+      );
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+
+      oscillator.start(now);
+      oscillator.stop(now + duration);
+
+    } catch (error) {
+      // Audio is optional; physics must never depend on it.
+    }
+  }
+
+  function updateAudio() {
+    if (!audioContext || !windGain) return;
+
+    const target = gameState === "playing"
+      ? Math.min(0.035, Math.abs(hero.vx) / 10000)
+      : 0;
+
+    windGain.gain.setTargetAtTime(
+      target,
+      audioContext.currentTime,
+      0.12
+    );
+  }
+
+  /* ------------------ PARTICLES ------------------ */
+
+  function emitParticles(x, y, count, color, speed = 120) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const velocity = Math.random() * speed;
+
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * velocity,
+        vy: Math.sin(angle) * velocity - 35,
+        life: 0.35 + Math.random() * 0.6,
+        maxLife: 0.95,
+        size: 2 + Math.random() * 4,
+        color
+      });
+    }
+  }
+
+  function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+
+      p.life -= dt;
+
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 180 * dt;
+      p.vx *= Math.exp(-0.5 * dt);
+    }
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+      ctx.fillStyle = p.color;
+
+      ctx.beginPath();
+      ctx.arc(p.x - cameraX, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  /* ------------------ CLOUD GENERATION ------------------ */
+
+  for (let i = 0; i < 32; i++) {
+    clouds.push({
+      x: i * 190 + Math.random() * 100,
+      y: 45 + Math.random() * 235,
+      scale: 0.55 + Math.random() * 1.15,
+      speed: 7 + Math.random() * 16
+    });
+  }
+
+  /* ------------------ INPUT ------------------ */
+
+  function pressJump() {
+    if (gameState === "ready") {
+      startGame();
+      return;
+    }
+
+    if (gameState !== "playing") return;
+
+    input.jumpPressed = true;
+    hero.jumpBuffer = 0.15;
+  }
+
+  function startGame() {
+    initAudio();
+    resetGame();
+  }
+
+  window.addEventListener("keydown", event => {
+    const key = event.key.toLowerCase();
+
+    if (
+      key === "arrowleft" ||
+      key === "arrowright" ||
+      key === "arrowup" ||
+      key === " " ||
+      key === "a" ||
+      key === "d"
+    ) {
+      event.preventDefault();
+    }
+
+    if (key === "r") {
+      startGame();
+      return;
+    }
+
+    if (
+      key === " " ||
+      key === "arrowup" ||
+      key === "w"
+    ) {
+      if (!event.repeat) pressJump();
+    }
+
+    if (key === "arrowleft" || key === "a") {
+      input.left = true;
+    }
+
+    if (key === "arrowright" || key === "d") {
+      input.right = true;
+    }
+  });
+
+  window.addEventListener("keyup", event => {
+    const key = event.key.toLowerCase();
+
+    if (key === "arrowleft" || key === "a") {
+      input.left = false;
+    }
+
+    if (key === "arrowright" || key === "d") {
+      input.right = false;
+    }
+  });
+
+  window.addEventListener("blur", () => {
+    input.left = false;
+    input.right = false;
+    input.jumpPressed = false;
+  });
+
+  function bindHoldButton(id, direction) {
+    const button = $(id);
+
+    button.addEventListener("pointerdown", event => {
+      event.preventDefault();
+
+      if (gameState === "ready") {
+        startGame();
+      }
+
+      input[direction] = true;
+
+      try {
+        button.setPointerCapture(event.pointerId);
+      } catch (error) {}
+    });
+
+    const release = event => {
+      event.preventDefault();
+      input[direction] = false;
+    };
+
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
+    button.addEventListener("lostpointercapture", () => {
+      input[direction] = false;
+    });
+  }
+
+  bindHoldButton("leftBtn", "left");
+  bindHoldButton("rightBtn", "right");
+
+  $("jumpBtn").addEventListener("pointerdown", event => {
+    event.preventDefault();
+
+    if (gameState === "ready") {
+      startGame();
+    }
+
+    pressJump();
+  });
+
+  $("startBtn").addEventListener("click", startGame);
+  $("replayBtn").addEventListener("click", startGame);
+
+  $("exploreBtn").addEventListener("click", () => {
+    if (gameState !== "won") return;
+
+    gameState = "exploring";
+    ui.winOverlay.classList.add("hidden");
+    ui.exploreOverlay.classList.remove("hidden");
+    ui.status.textContent = "Exploring";
+  });
+
+  $("backBtn").addEventListener("click", () => {
+    gameState = "won";
+    ui.exploreOverlay.classList.add("hidden");
+    ui.winOverlay.classList.remove("hidden");
+    ui.status.textContent = "Complete";
+  });
+
+  /* ------------------ COLLISION DETECTION ------------------ */
+
+  function getFeet() {
+    return {
+      left: hero.x - hero.width / 2,
+      right: hero.x + hero.width / 2,
+      bottom: hero.y
+    };
+  }
+
+  function overlapsHorizontal(left, right, platform) {
+    return right > platform.x &&
+           left < platform.x + platform.w;
+  }
+
+  function findLanding(previousBottom, nextBottom) {
+    if (hero.vy < 0) return null;
+
+    const feet = getFeet();
+
+    for (const platform of platforms) {
+      const horizontalOverlap = overlapsHorizontal(
+        feet.left,
+        feet.right,
+        platform
+      );
+
+      const crossedTop =
+        previousBottom <= platform.y &&
+        nextBottom >= platform.y;
+
+      if (horizontalOverlap && crossedTop) {
+        return platform;
+      }
+    }
+
+    return null;
+  }
+
+  /* ------------------ JUMP PHYSICS ------------------ */
+
+  function jump() {
+    if (!hero.grounded && hero.coyoteTime <= 0) return;
+
+    // Running momentum strengthens the leap.
+    const speedRatio = Math.min(
+      1,
+      Math.abs(hero.vx) / 340
+    );
+
+    const horizontalDirection =
+      input.left && !input.right ? -1 :
+      input.right && !input.left ? 1 :
+      hero.facing;
+
+    const jumpStrength = 525 + speedRatio * 125;
+
+    hero.vy = -jumpStrength;
+
+    // Preserve running momentum and add forward thrust.
+    hero.vx += horizontalDirection * (100 + speedRatio * 65);
+
+    hero.grounded = false;
+    hero.coyoteTime = 0;
+    hero.jumpHold = 0.18;
+    hero.launchPose = 0.22;
+    hero.rotation = 0;
+
+    emitParticles(
+      hero.x,
+      hero.y - 4,
+      15,
+      "#ffe08a",
+      130
+    );
+
+    playTone(180, 0.35, 0.11, "triangle");
+    playTone(95, 0.45, 0.08, "sawtooth");
+  }
+
+  function updateHero(dt) {
+    hero.previousX = hero.x;
+    hero.previousY = hero.y;
+
+    hero.jumpBuffer = Math.max(0, hero.jumpBuffer - dt);
+    hero.launchPose = Math.max(0, hero.launchPose - dt);
+    hero.landingImpact = Math.max(0, hero.landingImpact - dt);
+
+    if (hero.grounded) {
+      hero.coyoteTime = 0.11;
+    } else {
+      hero.coyoteTime = Math.max(0, hero.coyoteTime - dt);
+    }
+
+    if (hero.jumpBuffer > 0 && hero.coyoteTime > 0) {
+      jump();
+      hero.jumpBuffer = 0;
+    }
+
+    // Horizontal movement and acceleration.
+    if (input.left) {
+      hero.vx -= 760 * dt;
+      hero.facing = -1;
+    }
+
+    if (input.right) {
+      hero.vx += 760 * dt;
+      hero.facing = 1;
+    }
+
+    const maxSpeed = hero.grounded ? 390 : 330;
+
+    hero.vx = Math.max(
+      -maxSpeed,
+      Math.min(maxSpeed, hero.vx)
+    );
+
+    // Ground friction is stronger than aerial drag.
+    if (hero.grounded && !input.left && !input.right) {
+      hero.vx *= Math.exp(-5.0 * dt);
+    } else if (!hero.grounded) {
+      hero.vx *= Math.exp(-0.32 * dt);
+    }
+
+    // Short jump-hold bonus allows a slightly longer leap.
+    if (
+      !hero.grounded &&
+      hero.jumpHold > 0 &&
+      input.jumpPressed &&
+      hero.vy < 0
+    ) {
+      hero.vy -= 420 * dt;
+      hero.jumpHold -= dt;
+    } else {
+      hero.jumpHold = 0;
+    }
+
+    input.jumpPressed = false;
+
+    // Air control: steer while airborne.
+    if (!hero.grounded) {
+      if (input.left && !input.right) {
+        hero.vx -= 180 * dt;
+      }
+
+      if (input.right && !input.left) {
+        hero.vx += 180 * dt;
+      }
+    }
+
+    hero.vx = Math.max(-maxSpeed, Math.min(maxSpeed, hero.vx));
+
+    const oldBottom = hero.y;
+
+    // Semi-implicit Euler integration.
+    hero.vy += GRAVITY * dt;
+
+    hero.x += hero.vx * dt;
+    hero.y += hero.vy * dt;
+
+    hero.x = Math.max(
+      hero.width / 2,
+      Math.min(WORLD_END + 100, hero.x)
+    );
+
+    hero.grounded = false;
+
+    const landing = findLanding(oldBottom, hero.y);
+
+    if (landing) {
+      hero.y = landing.y;
+      hero.vy = 0;
+      hero.grounded = true;
+      hero.coyoteTime = 0.11;
+
+      if (hero.previousY < landing.y - 2) {
+        hero.landingImpact = 0.22;
+
+        emitParticles(
+          hero.x,
+          hero.y - 2,
+          9,
+          landing.type === "lanka" ? "#ffd166" : "#c4d3dc",
+          85
+        );
+
+        playTone(105, 0.22, 0.06, "triangle");
+      }
+    }
+
+    // Prevent falling forever. Respawn at the last safe checkpoint.
+    if (hero.y > H + 260) {
+      respawn();
+    }
+
+    // A soft animation rotation while airborne.
+    if (!hero.grounded) {
+      hero.rotation = Math.max(
+        -0.25,
+        Math.min(0.25, hero.vy / 1600)
+      );
+    } else {
+      hero.rotation *= Math.exp(-12 * dt);
+    }
+
+    hero.tailPhase += dt * (
+      4 + Math.abs(hero.vx) * 0.025
+    );
+
+    // Reaching the Lanka landing area completes the crossing.
+    if (
+      hero.x >= LANKA_START + 20 &&
+      hero.grounded &&
+      hero.y <= 420
+    ) {
+      winGame();
+    }
+  }
+
+  function respawn() {
+    // The last safe location is used as a checkpoint.
+    const checkpoint = hero.x >= 1900 ? 1910 :
+                       hero.x >= 950 ? 940 : 95;
+
+    hero.x = checkpoint;
+    hero.y = checkpoint === 95 ? 420 :
+             checkpoint === 940 ? 365 : 335;
+
+    hero.vx = 0;
+    hero.vy = 0;
+    hero.grounded = true;
+    hero.coyoteTime = 0;
+    hero.jumpBuffer = 0;
+
+    cameraX = Math.max(
+      0,
+      Math.min(WORLD_END - W, hero.x - W * 0.35)
+    );
+
+    emitParticles(hero.x, hero.y, 10, "#ffffff", 90);
+  }
+
+  function winGame() {
+    if (gameState !== "playing") return;
+
+    gameState = "won";
+
+    hero.vx = 0;
+    hero.vy = 0;
+
+    ui.status.textContent = "Complete";
+    ui.winOverlay.classList.remove("hidden");
+
+    playTone(392, 0.5, 0.1);
+    setTimeout(() => playTone(523, 0.65, 0.1), 180);
+    setTimeout(() => playTone(659, 0.8, 0.1), 360);
+  }
+
+  /* ------------------ STAGE AND CAMERA ------------------ */
+
+  function getStage() {
+    if (hero.x < 400) return "Mountain Launch";
+    if (hero.x < 1800) return "Floating Rocks";
+    if (hero.x < 3200) return "Cloud Passage";
+    if (hero.x < LANKA_START) return "Approaching Lanka";
+    return "Lanka Landing";
+  }
+
+  function updateCamera(dt) {
+    const target = Math.max(
+      0,
+      Math.min(WORLD_END - W, hero.x - W * 0.36)
+    );
+
+    cameraX += (target - cameraX) *
+      Math.min(1, dt * 4.5);
+  }
+
+  function updateUI() {
+    const progress = Math.max(
+      0,
+      Math.min(100, hero.x / LANKA_START * 100)
+    );
+
+    ui.distance.textContent = Math.round(progress) + "%";
+    ui.speed.textContent = Math.round(Math.abs(hero.vx));
+    ui.progress.style.width = progress + "%";
+    ui.stage.textContent = getStage();
+
+    if (gameState === "ready") {
+      ui.status.textContent = "Ready";
+    } else if (gameState === "playing") {
+      ui.status.textContent = hero.grounded ? "Grounded" : "Flying";
+    }
+  }
+
+  /* ------------------ BACKGROUND RENDERING ------------------ */
+
+  function drawBackground() {
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+
+    sky.addColorStop(0, "#55b9e8");
+    sky.addColorStop(0.52, "#b2e9f7");
+    sky.addColorStop(1, "#f9d9a1");
+
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Sun.
+    const sunX = 790 - cameraX * 0.025;
+
+    ctx.fillStyle = "rgba(255, 239, 170, 0.85)";
+    ctx.beginPath();
+    ctx.arc(sunX, 100, 37, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255, 242, 195, 0.25)";
+    ctx.beginPath();
+    ctx.arc(sunX, 100, 58, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Distant mountain silhouettes.
+    drawMountainLayer(
+      "#8bbbd0",
+      0.12,
+      270,
+      90,
+      0.0009
+    );
+
+    drawMountainLayer(
+      "#5c98b0",
+      0.23,
+      330,
+      110,
+      0.0013
+    );
+
+    // Lanka is visible in the distance.
+    const islandX = 4180 - cameraX * 0.72;
+
+    if (islandX > -500 && islandX < W + 500) {
+      drawDistantLanka(islandX);
+    }
+
+    // Clouds use parallax and gentle movement.
+    for (const cloud of clouds) {
+      const x = (
+        cloud.x + elapsed * cloud.speed -
+        cameraX * 0.38
+      );
+
+      const wrappedX = ((x % (W + 240)) + W + 240) %
+                       (W + 240) - 120;
+
+      drawCloud(
+        wrappedX,
+        cloud.y + Math.sin(elapsed * 0.5 + cloud.x) * 5,
+        cloud.scale
+      );
+    }
+
+    drawOcean();
+  }
+
+  function drawMountainLayer(color, parallax, baseY, amplitude, frequency) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+
+    for (let x = 0; x <= W; x += 8) {
+      const worldX = x + cameraX * parallax;
+
+      const y = baseY -
+        Math.abs(Math.sin(worldX * frequency)) * amplitude -
+        Math.abs(Math.sin(worldX * frequency * 2.4)) *
+          amplitude * 0.25;
+
+      ctx.lineTo(x, y);
+    }
+
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawDistantLanka(x) {
+    const baseY = 405;
+
+    // Island.
+    ctx.fillStyle = "#427f59";
+    ctx.beginPath();
+    ctx.ellipse(x, baseY, 245, 38, 0, Math.PI, Math.PI * 2);
+    ctx.lineTo(x + 245, H);
+    ctx.lineTo(x - 245, H);
+    ctx.closePath();
+    ctx.fill();
+
+    // Golden palace towers.
+    ctx.fillStyle = "#e8b64e";
+
+    for (let i = -2; i <= 2; i++) {
+      const tx = x + i * 47;
+      const th = 42 + (2 - Math.abs(i)) * 13;
+
+      ctx.fillRect(tx - 12, baseY - th, 24, th);
+
+      ctx.beginPath();
+      ctx.moveTo(tx - 15, baseY - th);
+      ctx.lineTo(tx, baseY - th - 22);
+      ctx.lineTo(tx + 15, baseY - th);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawCloud(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = "rgba(255,255,255,0.82)";
+
+    ctx.beginPath();
+    ctx.ellipse(0, 8, 35, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(-20, 2, 20, 15, 0, 0, Math.PI * 2);
+    ctx.ellipse(4, -7, 23, 21, 0, 0, Math.PI * 2);
+    ctx.ellipse(23, 2, 21, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawOcean() {
+    const sea = ctx.createLinearGradient(0, 370, 0, H);
+
+    sea.addColorStop(0, "#2499c7");
+    sea.addColorStop(0.45, "#087fae");
+    sea.addColorStop(1, "#075078");
+
+    ctx.fillStyle = sea;
+    ctx.fillRect(0, 380, W, H - 380);
+
+    // Animated waves.
+    for (let row = 0; row < 8; row++) {
+      const y = 395 + row * 21;
+      const parallax = 0.2 + row * 0.06;
+
+      ctx.beginPath();
+
+      for (let x = 0; x <= W; x += 5) {
+        const worldX = x + cameraX * parallax;
+
+        const waveY = y +
+          Math.sin(worldX * 0.025 + elapsed * 1.5 + row) * 5 +
+          Math.sin(worldX * 0.009 - elapsed * 0.9) * 3;
+
+        if (x === 0) ctx.moveTo(x, waveY);
+        else ctx.lineTo(x, waveY);
+      }
+
+      ctx.strokeStyle = row % 2 === 0
+        ? "rgba(190,244,255,0.32)"
+        : "rgba(255,255,255,0.16)";
+
+      ctx.lineWidth = row % 2 === 0 ? 2 : 1;
+      ctx.stroke();
+    }
+  }
+
+  /* ------------------ TERRAIN ------------------ */
+
+  function drawTerrain() {
+    for (const platform of platforms) {
+      const screenX = platform.x - cameraX;
+
+      if (
+        screenX + platform.w < -50 ||
+        screenX > W + 50
+      ) {
+        continue;
+      }
+
+      if (platform.type === "mountain") {
+        drawMountainPlatform(platform, screenX);
+      } else if (platform.type === "lanka") {
+        drawLankaPlatform(platform, screenX);
+      } else {
+        drawRock(platform, screenX);
+      }
+    }
+  }
+
+  function drawMountainPlatform(p, x) {
+    ctx.fillStyle = "#6c756b";
+    ctx.fillRect(x, p.y, p.w, H - p.y + 100);
+
+    ctx.fillStyle = "#42764e";
+    ctx.fillRect(x, p.y, p.w, 12);
+
+    ctx.fillStyle = "#a2b0a0";
+
+    ctx.beginPath();
+    ctx.moveTo(x, p.y);
+    ctx.lineTo(x + 48, p.y - 16);
+    ctx.lineTo(x + 95, p.y);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#8c9b8b";
+
+    for (let i = 0; i < 6; i++) {
+      const rx = x + 15 + i * 52;
+      const ry = p.y + 35 + (i % 2) * 26;
+
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.lineTo(rx + 24, ry - 7);
+      ctx.lineTo(rx + 43, ry + 13);
+      ctx.lineTo(rx + 12, ry + 19);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawRock(p, x) {
+    const y = p.y;
+
+    ctx.fillStyle = "#647d86";
+
+    ctx.beginPath();
+    ctx.moveTo(x, y + 7);
+    ctx.lineTo(x + 16, y - 5);
+    ctx.lineTo(x + p.w * 0.4, y - 11);
+    ctx.lineTo(x + p.w - 8, y - 3);
+    ctx.lineTo(x + p.w, y + 8);
+    ctx.lineTo(x + p.w - 14, y + p.h);
+    ctx.lineTo(x + 18, y + p.h);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#a9c2c8";
+
+    ctx.beginPath();
+    ctx.moveTo(x + 16, y - 5);
+    ctx.lineTo(x + p.w * 0.4, y - 11);
+    ctx.lineTo(x + p.w * 0.64, y - 4);
+    ctx.lineTo(x + p.w * 0.3, y + 2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function drawLankaPlatform(p, x) {
+    ctx.fillStyle = "#c7a46a";
+    ctx.fillRect(x, p.y, p.w, H - p.y + 100);
+
+    ctx.fillStyle = "#d9c080";
+    ctx.fillRect(x, p.y, p.w, 8);
+
+    // Grass.
+    ctx.fillStyle = "#4a9657";
+    ctx.fillRect(x, p.y, p.w, 9);
+
+    // Decorative golden temple.
+    const templeX = x + 130;
+
+    ctx.fillStyle = "#f1c65d";
+
+    ctx.fillRect(templeX, p.y - 62, 68, 62);
+    ctx.fillRect(templeX + 22, p.y - 93, 24, 31);
+
+    ctx.beginPath();
+    ctx.moveTo(templeX - 6, p.y - 62);
+    ctx.lineTo(templeX + 34, p.y - 105);
+    ctx.lineTo(templeX + 74, p.y - 62);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#8e512e";
+
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(
+        templeX + 12 + i * 20,
+        p.y - 32,
+        10,
+        20
+      );
+    }
+
+    // Lanka banner.
+    ctx.strokeStyle = "#9a6330";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(templeX + 90, p.y);
+    ctx.lineTo(templeX + 90, p.y - 88);
+    ctx.stroke();
+
+    ctx.fillStyle = "#e44736";
+    ctx.beginPath();
+    ctx.moveTo(templeX + 90, p.y - 88);
+    ctx.lineTo(templeX + 132, p.y - 75);
+    ctx.lineTo(templeX + 90, p.y - 62);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /* ------------------ HANUMAN ANIMATION ------------------ */
+
+  function drawHanuman() {
+    const screenX = hero.x - cameraX;
+    const screenY = hero.y;
+
+    ctx.save();
+    ctx.translate(screenX, screenY);
+
+    // Landing compression and launch anticipation.
+    if (hero.grounded && hero.landingImpact > 0) {
+      const compression = hero.landingImpact * 0.65;
+      ctx.scale(1 + compression, 1 - compression);
+    }
+
+    ctx.rotate(hero.rotation);
+
+    // Tail: a flexible animated curve.
+    const tailWave = Math.sin(hero.tailPhase) * 13;
+
+    ctx.strokeStyle = "#a95426";
+    ctx.lineWidth = 7;
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(-hero.facing * 7, -23);
+    ctx.bezierCurveTo(
+      -hero.facing * 24,
+      -32 + tailWave,
+      -hero.facing * 32,
+      -5 + tailWave,
+      -hero.facing * 23,
+      3 + tailWave
+    );
+    ctx.stroke();
+
+    ctx.fillStyle = "#e6a44a";
+    ctx.beginPath();
+    ctx.arc(-hero.facing * 23, 3 + tailWave, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body.
+    ctx.fillStyle = "#e8a65b";
+    ctx.beginPath();
+    ctx.ellipse(0, -29, 13, 19, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Red-orange dhoti.
+    ctx.fillStyle = "#d94b31";
+    ctx.beginPath();
+    ctx.moveTo(-12, -25);
+    ctx.lineTo(12, -25);
+    ctx.lineTo(14, -7);
+    ctx.lineTo(0, -3);
+    ctx.lineTo(-14, -7);
+    ctx.closePath();
+    ctx.fill();
+
+    // Golden waistband.
+    ctx.fillStyle = "#ffd166";
+    ctx.fillRect(-12, -26, 24, 4);
+
+    // Legs.
+    ctx.strokeStyle = "#d9904d";
+    ctx.lineWidth = 7;
+
+    ctx.beginPath();
+    ctx.moveTo(-6, -8);
+    ctx.lineTo(-10, -1);
+    ctx.lineTo(-12, 0);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(6, -8);
+    ctx.lineTo(10, -1);
+    ctx.lineTo(12, 0);
+    ctx.stroke();
+
+    // Arms.
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "#e8a65b";
+
+    const armLift = hero.grounded ? 0 :
+      Math.sin(elapsed * 8) * 3;
+
+    ctx.beginPath();
+    ctx.moveTo(-9, -36);
+    ctx.lineTo(-16, -25 - armLift);
+    ctx.lineTo(-11, -20 - armLift);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(9, -36);
+    ctx.lineTo(16, -26 + armLift);
+    ctx.lineTo(11, -21 + armLift);
+    ctx.stroke();
+
+    // Neck and head.
+    ctx.fillStyle = "#e8a65b";
+    ctx.fillRect(-4, -49, 8, 9);
+
+    ctx.beginPath();
+    ctx.arc(0, -52, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Muzzle.
+    ctx.fillStyle = "#f2c58e";
+    ctx.beginPath();
+    ctx.ellipse(0, -48, 7, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes.
+    ctx.fillStyle = "#29221c";
+
+    ctx.beginPath();
+    ctx.arc(hero.facing * 4, -54, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Golden crown.
+    ctx.fillStyle = "#ffd166";
+
+    ctx.beginPath();
+    ctx.moveTo(-9, -60);
+    ctx.lineTo(-7, -70);
+    ctx.lineTo(0, -64);
+    ctx.lineTo(7, -70);
+    ctx.lineTo(9, -60);
+    ctx.closePath();
+    ctx.fill();
+
+    // Crown jewel.
+    ctx.fillStyle = "#e94e54";
+    ctx.beginPath();
+    ctx.arc(0, -63, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Golden aura while flying quickly.
+    if (!hero.grounded && Math.abs(hero.vx) > 170) {
+      ctx.strokeStyle = "rgba(255, 220, 120, 0.7)";
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.ellipse(0, -28, 22, 32, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  /* ------------------ GAME UPDATE ------------------ */
+
+  function update(dt) {
+    elapsed += dt;
+
+    if (gameState === "playing") {
+      updateHero(dt);
+      updateCamera(dt);
+      updateParticles(dt);
+      updateAudio();
+    } else {
+      // Keep the environment animated at the title screen.
+      updateParticles(dt);
+    }
+
+    updateUI();
+  }
+
+  /* ------------------ RENDER ------------------ */
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+
+    drawBackground();
+    drawTerrain();
+    drawParticles();
+    drawHanuman();
+
+    // Wind streaks at high speed.
+    if (
+      gameState === "playing" &&
+      !hero.grounded &&
+      Math.abs(hero.vx) > 190
+    ) {
+      ctx.strokeStyle = "rgba(255,255,255,0.45)";
+      ctx.lineWidth = 2;
+
+      for (let i = 0; i < 4; i++) {
+        const offsetY = 140 + i * 25;
+        const offsetX = ((elapsed * 180 + i * 70) % 140);
+
+        ctx.beginPath();
+        ctx.moveTo(W - offsetX, offsetY);
+        ctx.lineTo(W - offsetX - 30, offsetY);
+        ctx.stroke();
+      }
+    }
+  }
+
+  /* ------------------ MAIN GAME LOOP ------------------ */
+
+  function frame(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+
+    // Limit large time steps after tab suspension.
+    const dt = Math.min(
+      Math.max((timestamp - lastTime) / 1000, 0),
+      MAX_FRAME_TIME
+    );
+
+    lastTime = timestamp;
+
+    update(dt);
+    render();
+
+    requestAnimationFrame(frame);
+  }
+
+  /* ------------------ DIAGNOSTIC TESTS ------------------ */
+
+  function runSelfTests() {
+    const results = [];
+
+    function test(name, fn) {
+      try {
+        if (!fn()) throw new Error("Assertion failed");
+
+        results.push({
+          name,
+          passed: true
+        });
+      } catch (error) {
+        results.push({
+          name,
+          passed: false,
+          error: error.message
+        });
+      }
+    }
+
+    test("Canvas dimensions are valid", () =>
+      W > 0 && H > 0
+    );
+
+    test("Gravity is positive", () =>
+      GRAVITY > 0
+    );
+
+    test("World end lies beyond Lanka", () =>
+      WORLD_END > LANKA_START
+    );
+
+    test("Platforms have valid dimensions", () =>
+      platforms.every(p =>
+        Number.isFinite(p.x) &&
+        Number.isFinite(p.y) &&
+        p.w > 0 &&
+        p.h > 0
+      )
+    );
+
+    test("Mountain launch platform exists", () =>
+      platforms.some(p => p.type === "mountain")
+    );
+
+    test("Lanka landing platform exists", () =>
+      platforms.some(p => p.type === "lanka")
+    );
+
+    test("Collision overlap detects intersecting ranges", () =>
+      overlapsHorizontal(10, 30, {
+        x: 20,
+        w: 20
+      })
+    );
+
+    test("Collision overlap rejects separated ranges", () =>
+      !overlapsHorizontal(10, 15, {
+        x: 20,
+        w: 20
+      })
+    );
+
+    test("Projectile flight time is positive", () => {
+      const v0 = 500;
+      const theta = Math.PI / 4;
+
+      const T = 2 * v0 * Math.sin(theta) / GRAVITY;
+
+      return Number.isFinite(T) && T > 0;
+    });
+
+    test("Projectile range is positive", () => {
+      const v0 = 500;
+      const theta = Math.PI / 4;
+
+      const R =
+        v0 * v0 * Math.sin(2 * theta) / GRAVITY;
+
+      return Number.isFinite(R) && R > 0;
+    });
+
+    test("Character dimensions are positive", () =>
+      hero.width > 0 && hero.height > 0
+    );
+
+    test("Initial character starts on the mountain", () =>
+      hero.x > 0 && hero.y === 420
+    );
+
+    test("Camera limits are valid", () =>
+      WORLD_END - W >= 0
+    );
+
+    const failed = results.filter(r => !r.passed);
+
+    console.group("Hanuman Travels to Lanka — Self-tests");
+
+    for (const result of results) {
+      if (result.passed) {
+        console.log("PASS:", result.name);
+      } else {
+        console.error("FAIL:", result.name, result.error);
+      }
+    }
+
+    console.log(
+      `${results.length - failed.length}/${results.length} tests passed`
+    );
+
+    console.groupEnd();
+
+    return {
+      passed: failed.length === 0,
+      total: results.length,
+      failed: failed.length,
+      results
+    };
+  }
+
+  // Expose diagnostics for browser-console testing.
+  window.HanumanGame = {
+    runSelfTests,
+    resetGame,
+    getState: () => gameState,
+    getCharacter: () => ({
+      x: hero.x,
+      y: hero.y,
+      vx: hero.vx,
+      vy: hero.vy,
+      grounded: hero.grounded
+    }),
+    getPlatforms: () => platforms.map(p => ({ ...p }))
+  };
+
+  // Initial rendering.
+  render();
+  updateUI();
+
+  // Run deterministic, non-destructive startup checks.
+  window.HanumanGame.testResults = runSelfTests();
+
+  // Start the animation loop.
+  requestAnimationFrame(frame);
+
+})();
+</script>
+
+</body>
+</html>
+
