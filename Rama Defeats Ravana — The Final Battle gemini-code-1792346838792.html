@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rama Defeats Ravana - Boss Battle Prototype</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            color: #fbbf24;
+            text-transform: uppercase;
+        }
+        .game-container {
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+            border: 2px solid #374151;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #111827;
+        }
+        canvas {
+            display: block;
+            background: linear-gradient(to bottom, #1f2937, #111827);
+        }
+        .instructions {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #9ca3af;
+            text-align: center;
+            max-width: 800px;
+            line-height: 1.4;
+        }
+        span.key {
+            background: #374151;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            border-bottom: 2px solid #1f2937;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Rama Defeats Ravana</h1>
+    </header>
+
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="450"></canvas>
+    </div>
+
+    <div class="instructions">
+        <p>
+            <span class="key">A</span> <span class="key">D</span> or <span class="key">Left</span> <span class="key">Right</span> Move | 
+            <span class="key">W</span> or <span class="key">Space</span> Jump | 
+            <span class="key">Shift</span> Dodge Roll | 
+            <span class="key">J</span> / Left-Click Precision Shot | 
+            <span class="key">Hold K</span> Charged Arrow
+        </p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Input state
+        const keys = {};
+        window.addEventListener('keydown', e => { keys[e.code] = true; });
+        window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+        // Mouse tracking for aiming
+        const mouse = { x: 400, y: 225, down: false };
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+        canvas.addEventListener('mousedown', () => { mouse.down = true; });
+        canvas.addEventListener('mouseup', () => { mouse.down = false; });
+
+        // Game state constants & variables
+        const GRAVITY = 0.5;
+        let screenShake = 0;
+        let gameTime = 0;
+        let gameState = 'START'; // START, PLAYING, VICTORY, GAMEOVER
+
+        // Player (Rama)
+        const rama = {
+            x: 150,
+            y: 320,
+            width: 28,
+            height: 48,
+            vx: 0,
+            vy: 0,
+            speed: 3.5,
+            jumpForce: -11,
+            grounded: false,
+            hp: 100,
+            maxHp: 100,
+            isDodging: false,
+            dodgeTimer: 0,
+            dodgeCooldown: 0,
+            facing: 1, // 1 = right, -1 = left
+            invulnerableTimer: 0,
+            chargeTimer: 0
+        };
+
+        // Boss (Ravana)
+        const ravana = {
+            x: 620,
+            y: 280,
+            width: 44,
+            height: 72,
+            hp: 300,
+            maxHp: 300,
+            phase: 1, // 1: Warrior, 2: Power, 3: Final
+            state: 'IDLE',
+            stateTimer: 0,
+            attackCooldown: 120,
+            facing: -1,
+            color: '#ef4444'
+        };
+
+        // Entities arrays
+        let projectiles = [];
+        let particles = [];
+        let platforms = [
+            { x: 100, y: 280, w: 120, h: 12 },
+            { x: 580, y: 280, w: 120, h: 12 },
+            { x: 340, y: 200, w: 120, h: 12 }
+        ];
+
+        // Reset Game
+        function resetGame() {
+            rama.x = 150;
+            rama.y = 320;
+            rama.hp = rama.maxHp;
+            rama.vx = 0;
+            rama.vy = 0;
+            rama.isDodging = false;
+            
+            ravana.hp = ravana.maxHp;
+            ravana.phase = 1;
+            ravana.state = 'IDLE';
+            ravana.stateTimer = 0;
+            ravana.attackCooldown = 90;
+
+            projectiles = [];
+            particles = [];
+            gameState = 'PLAYING';
+        }
+
+        // Particle system
+        function spawnParticles(x, y, color, count = 10, speed = 3) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd = Math.random() * speed + 1;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    radius: Math.random() * 3 + 1,
+                    color,
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.02
+                });
+            }
+        }
+
+        // Screen shake trigger
+        function triggerShake(duration) {
+            screenShake = duration;
+        }
+
+        // Combat update & Logic
+        function update() {
+            gameTime++;
+            if (screenShake > 0) screenShake--;
+
+            if (gameState === 'START') {
+                if (keys['Space'] || keys['KeyW'] || mouse.down) {
+                    resetGame();
+                }
+                return;
+            }
+
+            if (gameState === 'VICTORY' || gameState === 'GAMEOVER') {
+                if (keys['Space']) {
+                    gameState = 'START';
+                }
+                return;
+            }
+
+            // --- RAMA PHYSICS & INPUT ---
+            if (rama.invulnerableTimer > 0) rama.invulnerableTimer--;
+            if (rama.dodgeCooldown > 0) rama.dodgeCooldown--;
+
+            // Dodge handling
+            if (rama.isDodging) {
+                rama.dodgeTimer--;
+                rama.vx = rama.facing * 7.5;
+                if (rama.dodgeTimer <= 0) rama.isDodging = false;
+            } else {
+                // Horizontal movement
+                let moveDir = 0;
+                if (keys['KeyA'] || keys['ArrowLeft']) moveDir = -1;
+                if (keys['KeyD'] || keys['ArrowRight']) moveDir = 1;
+
+                rama.vx = moveDir * rama.speed;
+                if (moveDir !== 0) rama.facing = moveDir;
+
+                // Jump
+                if ((keys['KeyW'] || keys['ArrowUp'] || keys['Space']) && rama.grounded) {
+                    rama.vy = rama.jumpForce;
+                    rama.grounded = false;
+                }
+
+                // Dodge roll trigger (Shift key)
+                if (keys['ShiftLeft'] || keys['ShiftRight']) {
+                    if (rama.dodgeCooldown === 0) {
+                        rama.isDodging = true;
+                        rama.dodgeTimer = 18; // duration of dodge frames
+                        rama.dodgeCooldown = 45;
+                        rama.invulnerableTimer = 18;
+                        spawnParticles(rama.x, rama.y, '#60a5fa', 8, 2);
+                    }
+                }
+
+                // Gravity
+                rama.vy += GRAVITY;
+            }
+
+            // Apply velocity
+            rama.x += rama.vx;
+            rama.y += rama.vy;
+
+            // Arena boundaries
+            if (rama.x < 20) rama.x = 20;
+            if (rama.x > canvas.width - 20) rama.x = canvas.width - 20;
+
+            // Ground collision
+            const groundLevel = 370;
+            if (rama.y + rama.height >= groundLevel) {
+                rama.y = groundLevel - rama.height;
+                rama.vy = 0;
+                rama.grounded = true;
+            }
+
+            // Platform collisions
+            platforms.forEach(plat => {
+                if (rama.vy > 0 &&
+                    rama.x + rama.width > plat.x &&
+                    rama.x < plat.x + plat.w &&
+                    rama.y + rama.height >= plat.y &&
+                    rama.y + rama.height - rama.vy <= plat.y + 6) {
+                    rama.y = plat.y - rama.height;
+                    rama.vy = 0;
+                    rama.grounded = true;
+                }
+            });
+
+            // --- ARCHERY (SHOOTING) ---
+            if (keys['KeyK']) {
+                rama.chargeTimer = Math.min(rama.chargeTimer + 1, 60);
+            } else if (rama.chargeTimer > 0) {
+                // Release charged arrow
+                let isCharged = rama.chargeTimer >= 40;
+                projectiles.push({
+                    x: rama.x + (rama.facing > 0 ? rama.width : 0),
+                    y: rama.y + rama.height / 2,
+                    vx: rama.facing * (isCharged ? 12 : 8),
+                    vy: 0,
+                    isBoss: false,
+                    damage: isCharged ? 35 : 15,
+                    radius: isCharged ? 6 : 4,
+                    color: isCharged ? '#fbbf24' : '#38bdf8'
+                });
+                spawnParticles(rama.x, rama.y + 20, '#38bdf8', 5, 2);
+                rama.chargeTimer = 0;
+            }
+
+            // Single shot via 'J' or click
+            if (keys['KeyJ'] || mouse.down) {
+                if (gameTime % 20 === 0 && !keys['KeyK']) {
+                    projectiles.push({
+                        x: rama.x + (rama.facing > 0 ? rama.width : 0),
+                        y: rama.y + rama.height / 2,
+                        vx: rama.facing * 9,
+                        vy: 0,
+                        isBoss: false,
+                        damage: 12,
+                        radius: 4,
+                        color: '#38bdf8'
+                    });
+                    keys['KeyJ'] = false; // consume single press
+                    mouse.down = false;
+                }
+            }
+
+
+            // --- BOSS STATE & LOGIC ---
+            // Determine Phase based on Ravana's health
+            let hpRatio = ravana.hp / ravana.maxHp;
+            if (hpRatio > 0.7) ravana.phase = 1;
+            else if (hpRatio > 0.35) ravana.phase = 2;
+            else ravana.phase = 3;
+
+            ravana.attackCooldown--;
+            if (ravana.attackCooldown <= 0) {
+                executeBossAttack();
+            }
+
+            // --- PROJECTILE UPDATES & COLLISIONS ---
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Boundary check
+                if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+
+                // Rama hitting Ravana
+                if (!p.isBoss) {
+                    if (p.x > ravana.x - ravana.width/2 && p.x < ravana.x + ravana.width/2 &&
+                        p.y > ravana.y - ravana.height/2 && p.y < ravana.y + ravana.height/2) {
+                        ravana.hp -= p.damage;
+                        spawnParticles(p.x, p.y, '#fbbf24', 8, 3);
+                        projectiles.splice(i, 1);
+
+                        if (ravana.hp <= 0) {
+                            gameState = 'VICTORY';
+                            triggerShake(40);
+                        }
+                    }
+                } 
+                // Ravana hitting Rama
+                else {
+                    if (rama.invulnerableTimer === 0 && !rama.isDodging) {
+                        if (p.x > rama.x && p.x < rama.x + rama.width &&
+                            p.y > rama.y && p.y < rama.y + rama.height) {
+                            rama.hp -= p.damage;
+                            rama.invulnerableTimer = 45;
+                            triggerShake(15);
+                            spawnParticles(rama.x, rama.y, '#ef4444', 10, 4);
+                            projectiles.splice(i, 1);
+
+                            if (rama.hp <= 0) {
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Particle updates
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.alpha -= pt.decay;
+                if (pt.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        // Boss Attack Patterns based on phases
+        function executeBossAttack() {
+            let dx = rama.x - ravana.x;
+            ravana.facing = dx < 0 ? -1 : 1;
+
+            if (ravana.phase === 1) {
+                // Warrior Phase: Sword Slash Wave / Dash
+                ravana.attackCooldown = Math.floor(Math.random() * 30) + 60;
+                projectiles.push({
+                    x: ravana.x,
+                    y: ravana.y + 10,
+                    vx: ravana.facing * 6,
+                    vy: 0,
+                    isBoss: true,
+                    damage: 15,
+                    radius: 8,
+                    color: '#f87171'
+                });
+            } else if (ravana.phase === 2) {
+                // Power Phase: Magical Projectile Spread
+                ravana.attackCooldown = Math.floor(Math.random() * 25) + 50;
+                for (let angleOffset = -0.3; angleOffset <= 0.3; angleOffset += 0.3) {
+                    projectiles.push({
+                        x: ravana.x,
+                        y: ravana.y,
+                        vx: ravana.facing * 5 * Math.cos(angleOffset),
+                        vy: 5 * Math.sin(angleOffset),
+                        isBoss: true,
+                        damage: 12,
+                        radius: 6,
+                        color: '#c084fc'
+                    });
+                }
+            } else {
+                // Final Phase: Rapid Energy Barrage & Hazard Waves
+                ravana.attackCooldown = 35;
+                let angle = Math.atan2((rama.y + rama.height/2) - ravana.y, (rama.x + rama.width/2) - ravana.x);
+                projectiles.push({
+                    x: ravana.x,
+                    y: ravana.y,
+                    vx: Math.cos(angle) * 7,
+                    vy: Math.sin(angle) * 7,
+                    isBoss: true,
+                    damage: 20,
+                    radius: 7,
+                    color: '#fb7185'
+                });
+            }
+        }
+
+        // Render graphics
+        function draw() {
+            ctx.save();
+            
+            // Apply screen shake offset
+            if (screenShake > 0) {
+                let shakeX = (Math.random() - 0.5) * 8;
+                let shakeY = (Math.random() - 0.5) * 8;
+                ctx.translate(shakeX, shakeY);
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // --- BACKGROUND (Lanka Ruins & Sky) ---
+            ctx.fillStyle = '#1e1b4b';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Distant towers & silhouettes
+            ctx.fillStyle = '#312e81';
+            ctx.fillRect(100, 150, 50, 220);
+            ctx.fillRect(180, 100, 70, 270);
+            ctx.fillRect(600, 120, 60, 250);
+
+            // Ground floor
+            ctx.fillStyle = '#374151';
+            ctx.fillRect(0, 370, canvas.width, 80);
+            ctx.fillStyle = '#4b5563';
+            ctx.fillRect(0, 370, canvas.width, 8);
+
+            // Platforms
+            platforms.forEach(plat => {
+                ctx.fillStyle = '#4b5563';
+                ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+                ctx.fillStyle = '#6b7280';
+                ctx.fillRect(plat.x, plat.y, plat.w, 3);
+            });
+
+            if (gameState === 'START') {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 28px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('RAMA DEFEATS RAVANA', canvas.width / 2, 180);
+                ctx.fillStyle = '#f3f4f6';
+                ctx.font = '16px sans-serif';
+                ctx.fillText('Press Space or Click to Enter the Final Battlefield', canvas.width / 2, 230);
+                ctx.restore();
+                return;
+            }
+
+            // --- DRAW RAMA ---
+            ctx.fillStyle = rama.invulnerableTimer % 4 < 2 ? '#38bdf8' : '#93c5fd';
+            ctx.fillRect(rama.x, rama.y, rama.width, rama.height);
+            // Bow charging visual indicator
+            if (rama.chargeTimer > 0) {
+                ctx.strokeStyle = rama.chargeTimer >= 40 ? '#fbbf24' : '#38bdf8';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(rama.x + rama.width / 2, rama.y + rama.height / 2, rama.chargeTimer / 2, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // --- DRAW RAVANA ---
+            ctx.fillStyle = ravana.color;
+            ctx.fillRect(ravana.x - ravana.width/2, ravana.y - ravana.height/2, ravana.width, ravana.height);
+            // Ravana crown / detail
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(ravana.x - 20, ravana.y - ravana.height/2 - 10, 40, 10);
+
+            // --- PROJECTILES ---
+            projectiles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // --- PARTICLES ---
+            particles.forEach(pt => {
+                ctx.fillStyle = pt.color;
+                ctx.globalAlpha = pt.alpha;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+
+            // --- UI & HUD ---
+            // Rama HP
+            ctx.fillStyle = '#374151';
+            ctx.fillRect(20, 20, 200, 20);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(20, 20, (rama.hp / rama.maxHp) * 200, 20);
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(20, 20, 200, 20);
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('RAMA', 25, 35);
+
+            // Ravana HP & Phase
+            ctx.fillStyle = '#374151';
+            ctx.fillRect(canvas.width - 220, 20, 200, 20);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(canvas.width - 220, 20, (ravana.hp / ravana.maxHp) * 200, 20);
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(canvas.width - 220, 20, 200, 20);
+            ctx.fillStyle = '#fff';
+            ctx.fillText(`RAVANA (Phase ${ravana.phase})`, canvas.width - 210, 35);
+
+            // --- END GAME OVERLAYS ---
+            if (gameState === 'VICTORY') {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 32px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('VICTORY!', canvas.width / 2, 180);
+                ctx.fillStyle = '#f3f4f6';
+                ctx.font = '16px sans-serif';
+                ctx.fillText('Ravana has fallen. Lanka is liberated.', canvas.width / 2, 225);
+                ctx.fillText('Press Space to Play Again', canvas.width / 2, 260);
+            } else if (gameState === 'GAMEOVER') {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 32px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('DEFEATED', canvas.width / 2, 180);
+                ctx.fillStyle = '#f3f4f6';
+                ctx.font = '16px sans-serif';
+                ctx.fillText('Rama faltered in the battle.', canvas.width / 2, 225);
+                ctx.fillText('Press Space to Retry', canvas.width / 2, 260);
+            }
+
+            ctx.restore();
+        }
+
+        // Main Game Loop
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
